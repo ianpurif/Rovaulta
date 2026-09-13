@@ -1,4 +1,4 @@
-# Rovaulta [STILL IN DEVELOPMENT]
+# Rovaulta
 
 ## A confidential deployment gate for autonomous warehouse robots
 
@@ -13,15 +13,15 @@ external Ledger Clear Signing prerequisite documented below.
 
 **Built for ETHGlobal with Chainlink CRE, The Graph, and Ledger as load-bearing integrations.**
 
-  > **Current status:** P1–P8 software is implemented and P9–P15 now wire the account-backed lifecycle
-  > through the partner boundaries: the official CRE CLI simulation path, a real Sepolia registry
-  > clearance, a live The Graph Subgraph Studio `MATCHED` check, and a real Gemini tool-calling run
-  > that reaches the existing Ledger-required handoff. The committed artifacts distinguish simulation
-  > from live CRE/DON execution and distinguish Speculos from physical Ledger evidence. Live CRE
-  > gateway/DON delivery, physical Clear Signing, the required two-to-four-minute Graph/ETHOnline
-  > demo video, and other final showcase assets remain open and are not
-  > presented as completed proof. Start Fresh / From Scratch eligibility is documented as a maintainer
-  > declaration with repository-history corroboration in the [eligibility artifact](docs/compliance/evidence/graph-start-fresh-eligibility-2026-09-11.md).
+> **Current status:** P1–P8 software is implemented and P9–P15 now wire the account-backed lifecycle
+> through the partner boundaries: the official CRE CLI simulation path, a real Sepolia registry
+> clearance, a live The Graph Subgraph Studio `MATCHED` check, and a real Gemini tool-calling run
+> that reaches the existing Ledger-required handoff. The committed artifacts distinguish simulation
+> from live CRE/DON execution and distinguish Speculos from physical Ledger evidence. Live CRE
+> gateway/DON delivery, physical Clear Signing, the required two-to-four-minute Graph/ETHOnline
+> demo video, and other final showcase assets remain open and are not
+> presented as completed proof. Start Fresh / From Scratch eligibility is documented as a maintainer
+> declaration with repository-history corroboration in the [eligibility artifact](docs/compliance/evidence/graph-start-fresh-eligibility-2026-09-11.md).
 
 [Product path](#use-the-product) · [How it works](#how-it-works) · [Partner proof](#partner-integrations) · [Testing](#testing) · [Known limits](#current-status-and-known-limits)
 
@@ -155,11 +155,11 @@ flowchart LR
 
 ## What stays private and what becomes public
 
-| Boundary                 | Data                                                                                 | Rule                                                                           |
-| ------------------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| Confidential evaluation  | Site envelope, blind, private rules, geometry, thresholds, and intermediate evidence | Used inside the CRE confidential callback; never logged or sent to the browser |
-| Public evaluation result | Version, verdict, evaluation ID, build/site bindings, and a behavior-input digest    | Minimal result only; it does not reveal the private envelope                   |
-| Sepolia registry         | Public hashes, exact bindings, `CLEAR`, issuer, timestamps, and revocation state     | No private rules or confidential payloads                                      |
+| Boundary                 | Data                                                                                 | Rule                                                                                                                   |
+| ------------------------ | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| Confidential evaluation  | Site envelope, blind, private rules, geometry, thresholds, and intermediate evidence | Used inside the CRE confidential callback; never logged or sent to the browser                                         |
+| Public evaluation result | Version, verdict, evaluation ID, build/site bindings, and a behavior-input digest    | Minimal result only; it does not reveal the private envelope                                                           |
+| Sepolia registry         | Public hashes, exact bindings, `CLEAR`, issuer, timestamps, and revocation state     | No private rules or confidential payloads                                                                              |
 | Ledger release           | Full deployment intent, including exact build, clearance, signer, nonce, and expiry  | Human hardware confirmation is required; the current evidence stops before signing and the backend never holds the key |
 
 ## Use the product
@@ -213,16 +213,16 @@ It is not account data, a live partner execution, a clearance, or proof of physi
 
 ## Key features
 
-| Feature                          | What the judge can verify                                                             | User benefit                                                       |
-| -------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Deterministic evaluation         | `@rovaulta/simulation-core` has fixed-unit rules and negative/property tests         | The same inputs produce the same verdict                           |
-| Confidential evaluation boundary | CRE `handlerInTee` consumes the private envelope and returns an allowlisted result    | Parties can verify a rule without publishing the rule              |
-| Exact build binding              | Canonical digests bind site, robot, build, envelope commitment, evaluator, and expiry | A later software change cannot quietly reuse an old clearance      |
-| Public attestation               | `RovaultaRegistry` stores public hashes and validity/revocation state on Sepolia     | Separate organizations have a shared verification surface          |
-| Bounded deployment agent         | Host-owned tools enforce a fixed order and finite public request grammar              | AI can orchestrate and explain without receiving release authority |
-| Live registry context            | The Graph indexes public RovaultaRegistry events; account preparation requires an exact match | AI decisions use current public chain context without indexing private site data |
-| Hardware approval                | Ledger DMK, WebHID, EIP-712, signer recovery, and one-time nonce checks               | A human approval is required for the exact high-impact action; this checkout has pre-signing evidence, not a completed signature |
-| Reliable rehearsal               | `demo:setup`, `demo:reset`, `demo:run`, and browser race tests                        | A judge can repeat the demo without stale state                    |
+| Feature                          | What the judge can verify                                                                     | User benefit                                                                                                                     |
+| -------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Deterministic evaluation         | `@rovaulta/simulation-core` has fixed-unit rules and negative/property tests                  | The same inputs produce the same verdict                                                                                         |
+| Confidential evaluation boundary | CRE `handlerInTee` consumes the private envelope and returns an allowlisted result            | Parties can verify a rule without publishing the rule                                                                            |
+| Exact build binding              | Canonical digests bind site, robot, build, envelope commitment, evaluator, and expiry         | A later software change cannot quietly reuse an old clearance                                                                    |
+| Public attestation               | `RovaultaRegistry` stores public hashes and validity/revocation state on Sepolia              | Separate organizations have a shared verification surface                                                                        |
+| Bounded deployment agent         | Host-owned tools enforce a fixed order and finite public request grammar                      | AI can orchestrate and explain without receiving release authority                                                               |
+| Live registry context            | The Graph indexes public RovaultaRegistry events; account preparation requires an exact match | AI decisions use current public chain context without indexing private site data                                                 |
+| Hardware approval                | Ledger DMK, WebHID, EIP-712, signer recovery, and one-time nonce checks                       | A human approval is required for the exact high-impact action; this checkout has pre-signing evidence, not a completed signature |
+| Reliable rehearsal               | `demo:setup`, `demo:reset`, `demo:run`, and browser race tests                                | A judge can repeat the demo without stale state                                                                                  |
 
 ## Partner integrations
 
@@ -230,19 +230,19 @@ It is not account data, a live partner execution, a clearance, or proof of physi
 
 These partners answer different questions:
 
-| Partner       | Question                                                                    | Actual use in Rovaulta                                                                                                                                            | Current proof                                                                                                                                               |
-| ------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Chainlink CRE | Can the site evaluate an exact build without exposing its private envelope? | The confidential workflow fetches a site-bound secret inside `handlerInTee`, invokes the deterministic evaluator, and releases only the minimal result. The account API uses the official gateway boundary or the explicit authenticated CLI simulation mode. | Current-source authenticated CLI simulation records unsafe `HOLD`, corrected `CLEAR`, and tampered commitment `REJECT`; one account-owned simulated `CLEAR` is persisted with explicit simulation provenance. Live gateway completion remains unconfigured. |
-| The Graph    | Can the agent use current public registry context before preparing a release? | A pinned, buildable Sepolia subgraph indexes public `RovaultaRegistry` events. The account-backed agent requires an exact live `MATCHED` Graph context before P5. | Real clearance is indexed, the Studio provider returns `MATCHED`, and the live Gemini run consumes that context before `prepareDeploymentIntent`; Gateway publication is not claimed. Start Fresh eligibility is documented separately. |
-| Ledger        | Who can authorize the exact release after it passes?                        | The browser uses Ledger DMK, WebHID or test-only Speculos, the Ethereum signer kit, and full EIP-712 intent checks. The agent stops at `LEDGER_APPROVAL_REQUIRED`. | Software and partial Speculos evidence are recorded. Physical Clear Signing and official Tester cases remain blocked by missing external access.            |
+| Partner       | Question                                                                      | Actual use in Rovaulta                                                                                                                                                                                                                                        | Current proof                                                                                                                                                                                                                                               |
+| ------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chainlink CRE | Can the site evaluate an exact build without exposing its private envelope?   | The confidential workflow fetches a site-bound secret inside `handlerInTee`, invokes the deterministic evaluator, and releases only the minimal result. The account API uses the official gateway boundary or the explicit authenticated CLI simulation mode. | Current-source authenticated CLI simulation records unsafe `HOLD`, corrected `CLEAR`, and tampered commitment `REJECT`; one account-owned simulated `CLEAR` is persisted with explicit simulation provenance. Live gateway completion remains unconfigured. |
+| The Graph     | Can the agent use current public registry context before preparing a release? | A pinned, buildable Sepolia subgraph indexes public `RovaultaRegistry` events. The account-backed agent requires an exact live `MATCHED` Graph context before P5.                                                                                             | Real clearance is indexed, the Studio provider returns `MATCHED`, and the live Gemini run consumes that context before `prepareDeploymentIntent`; Gateway publication is not claimed. Start Fresh eligibility is documented separately.                     |
+| Ledger        | Who can authorize the exact release after it passes?                          | The browser uses Ledger DMK, WebHID or test-only Speculos, the Ethereum signer kit, and full EIP-712 intent checks. The agent stops at `LEDGER_APPROVAL_REQUIRED`.                                                                                            | Software and partial Speculos evidence are recorded. Physical Clear Signing and official Tester cases remain blocked by missing external access.                                                                                                            |
 
 ### Current bounty status
 
-| Target | Status | Honest qualification boundary |
-| ------ | ------ | ------------------------------ |
-| Chainlink — Best Confidential Workflow | **PASS** for the accepted authenticated CRE simulation path | Official CRE CLI evidence proves confidential `HOLD`, `CLEAR`, and pre-evaluation tampered-commitment `REJECT`; live CRE/DON execution is not claimed. |
+| Target                                                    | Status                                                                                             | Honest qualification boundary                                                                                                                                                                                                                                                                                                                                                                 |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chainlink — Best Confidential Workflow                    | **PASS** for the accepted authenticated CRE simulation path                                        | Official CRE CLI evidence proves confidential `HOLD`, `CLEAR`, and pre-evaluation tampered-commitment `REJECT`; live CRE/DON execution is not claimed.                                                                                                                                                                                                                                        |
 | The Graph — Best AI Tooling or AI Use Case with The Graph | **PASS** for implementation; **PARTIAL** for final submission until the required video is attached | A real Sepolia clearance is indexed by the hosted Subgraph Studio deployment, the strict reader returns `MATCHED`, and the real Gemini agent consumes that context. Start Fresh eligibility is supported by the maintainer declaration and repository chronology; Gateway publication is not claimed, and the required two-to-four-minute demo video remains an external submission artifact. |
-| Ledger — AI Agents x Ledger | **PARTIAL** | The human-in-the-loop boundary, exact intent checks, DMK/WebHID/Speculos integration, and AI refusal to sign are implemented. A completed Ledger signature and authorization readback remain unavailable because the partner-issued origin/accepted-descriptor prerequisite is not configured. |
+| Ledger — AI Agents x Ledger                               | **PARTIAL**                                                                                        | The human-in-the-loop boundary, exact intent checks, DMK/WebHID/Speculos integration, and AI refusal to sign are implemented. A completed Ledger signature and authorization readback remain unavailable because the partner-issued origin/accepted-descriptor prerequisite is not configured.                                                                                                |
 
 Without Chainlink's confidential execution, the site would need to hand its private rules to the
 party running the evaluator. Without The Graph, the agent would have no indexed public registry
@@ -255,34 +255,34 @@ secret custody or a remote robot attestation.
 
 ## What is implemented now
 
-| Phase | Implemented scope                                                                                                          | Status                                                         |
-| ----- | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| P1    | Canonical identifiers, schemas, serialization, digests, validation, and binding failures                                   | Complete and tested                                            |
-| P2    | Seeded warehouse model, restricted-zone/speed/payload rules, deterministic evaluator, and negative/property tests          | Complete locally                                               |
-| P3    | CRE workflow, confidential handler, minimal public result, and redacted authenticated simulations                          | Implemented; live DON deployment not claimed                   |
-| P4    | Exact-binding Solidity registry, fuzz/invariant tests, and Sepolia deployment/source verification                          | Implemented; registrar attestation remains explicit and manual |
-| P5    | EIP-712 intent, exact registry checks, durable nonce, Ledger DMK/WebHID/Speculos adapter, and fail-closed signing boundary | Software implemented; hardware evidence incomplete             |
-| P5.2  | Strict Gemini function-calling adapter, host-owned tool state machine, catalog resolution, and Ledger-required handoff      | Live account/Graph run reaches `LEDGER_APPROVAL_REQUIRED`; physical approval remains incomplete |
-| P9    | CRE application boundary, The Graph public-context adapter/subgraph, and account-backed agent preparation                    | Chainlink simulation, live Studio `MATCHED`, and real Gemini handoff captured; Gateway/Ledger hardware remain open |
-| P6    | Judge dashboard and deterministic React Three Fiber digital twin                                                           | Implemented and browser-tested                                 |
-| P7    | Fixed-clock offline A/B/C rehearsal, demo reset, stale-response protection, and Playwright flow                            | Implemented and locally rehearsed                              |
-| UI    | Landing, first-time onboarding, workspace navigation, setup/build/evaluate/release/evidence views, and Ledger handoff UX  | Implemented and browser-smoke-tested                          |
+| Phase | Implemented scope                                                                                                          | Status                                                                                                             |
+| ----- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| P1    | Canonical identifiers, schemas, serialization, digests, validation, and binding failures                                   | Complete and tested                                                                                                |
+| P2    | Seeded warehouse model, restricted-zone/speed/payload rules, deterministic evaluator, and negative/property tests          | Complete locally                                                                                                   |
+| P3    | CRE workflow, confidential handler, minimal public result, and redacted authenticated simulations                          | Implemented; live DON deployment not claimed                                                                       |
+| P4    | Exact-binding Solidity registry, fuzz/invariant tests, and Sepolia deployment/source verification                          | Implemented; registrar attestation remains explicit and manual                                                     |
+| P5    | EIP-712 intent, exact registry checks, durable nonce, Ledger DMK/WebHID/Speculos adapter, and fail-closed signing boundary | Software implemented; hardware evidence incomplete                                                                 |
+| P5.2  | Strict Gemini function-calling adapter, host-owned tool state machine, catalog resolution, and Ledger-required handoff     | Live account/Graph run reaches `LEDGER_APPROVAL_REQUIRED`; physical approval remains incomplete                    |
+| P9    | CRE application boundary, The Graph public-context adapter/subgraph, and account-backed agent preparation                  | Chainlink simulation, live Studio `MATCHED`, and real Gemini handoff captured; Gateway/Ledger hardware remain open |
+| P6    | Judge dashboard and deterministic React Three Fiber digital twin                                                           | Implemented and browser-tested                                                                                     |
+| P7    | Fixed-clock offline A/B/C rehearsal, demo reset, stale-response protection, and Playwright flow                            | Implemented and locally rehearsed                                                                                  |
+| UI    | Landing, first-time onboarding, workspace navigation, setup/build/evaluate/release/evidence views, and Ledger handoff UX   | Implemented and browser-smoke-tested                                                                               |
 
 ## Technology and architecture
 
-| Area                 | Technology                                                                | Why it is here                                                                              |
-| -------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Runtime              | Bun 1.4.x, TypeScript, Turborepo                                          | One monorepo workflow for the apps, packages, and partner integrations                      |
-| Judge UI             | Next.js 16, React 19, React Three Fiber, Three.js                         | Shows the public evaluation projection and warehouse scene without receiving private inputs |
-| API                  | Fastify 5                                                                 | Hosts the release boundary and the narrow deployment-agent orchestration                    |
-| Domain               | Dependency-light TypeScript                                               | Keeps identifiers, schemas, canonical bytes, and digests independent of web or partner code |
-| Evaluator            | `@rovaulta/simulation-core`                                              | Pure deterministic rules that can run locally and inside the CRE callback                   |
-| Confidential compute | Chainlink CRE TypeScript SDK                                              | Provides the confidential workflow boundary for private envelope inputs                     |
-| Attestation          | Solidity, Foundry, viem, Ethereum Sepolia                                 | Stores public exact bindings without storing private facility data                          |
-| Human approval       | Ledger DMK, WebHID, Speculos test transport, Ethereum Signer Kit, EIP-712 | Keeps the release key on the device and makes the signed intent explicit                    |
+| Area                    | Technology                                                                                            | Why it is here                                                                                                                |
+| ----------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Runtime                 | Bun 1.4.x, TypeScript, Turborepo                                                                      | One monorepo workflow for the apps, packages, and partner integrations                                                        |
+| Judge UI                | Next.js 16, React 19, React Three Fiber, Three.js                                                     | Shows the public evaluation projection and warehouse scene without receiving private inputs                                   |
+| API                     | Fastify 5                                                                                             | Hosts the release boundary and the narrow deployment-agent orchestration                                                      |
+| Domain                  | Dependency-light TypeScript                                                                           | Keeps identifiers, schemas, canonical bytes, and digests independent of web or partner code                                   |
+| Evaluator               | `@rovaulta/simulation-core`                                                                           | Pure deterministic rules that can run locally and inside the CRE callback                                                     |
+| Confidential compute    | Chainlink CRE TypeScript SDK                                                                          | Provides the confidential workflow boundary for private envelope inputs                                                       |
+| Attestation             | Solidity, Foundry, viem, Ethereum Sepolia                                                             | Stores public exact bindings without storing private facility data                                                            |
+| Human approval          | Ledger DMK, WebHID, Speculos test transport, Ethereum Signer Kit, EIP-712                             | Keeps the release key on the device and makes the signed intent explicit                                                      |
 | Public registry context | The Graph Subgraph Studio deployment + Sepolia RovaultaRegistry subgraph (Gateway-compatible adapter) | Gives the bounded agent current public clearance context before the final P5 check; current live proof is Studio, not Gateway |
-| Persistence          | Bun SQLite with WAL and atomic nonce consumption                          | Provides a single-node replay boundary for the release service                              |
-| Quality              | Biome, Bun test, Playwright, Foundry, GitHub Actions                      | Covers formatting, unit tests, browser flow, contracts, and scaffold checks                 |
+| Persistence             | Bun SQLite with WAL and atomic nonce consumption                                                      | Provides a single-node replay boundary for the release service                                                                |
+| Quality                 | Biome, Bun test, Playwright, Foundry, GitHub Actions                                                  | Covers formatting, unit tests, browser flow, contracts, and scaffold checks                                                   |
 
 ### Sepolia registry
 
@@ -304,9 +304,9 @@ This guide covers everything required to set up, build, and run Rovaulta locally
 
 ### 1. System Requirements & Architecture
 
-* **Operating System:** Linux (Ubuntu 22.04 / 24.04 LTS recommended), macOS 13+ (Ventura / Sonoma / Sequoia), or Windows 10 / 11 running **WSL2** (Ubuntu 22.04 / 24.04).
-* **Hardware:** 64-bit x86_64 or ARM64 processor, 8 GB+ RAM, 10 GB+ free disk space.
-* **Network:** Outbound HTTPS access to Ethereum Sepolia RPC endpoints, Google AI Studio, The Graph Subgraph Studio, and Chainlink CRE Developer APIs.
+- **Operating System:** Linux (Ubuntu 22.04 / 24.04 LTS recommended), macOS 13+ (Ventura / Sonoma / Sequoia), or Windows 10 / 11 running **WSL2** (Ubuntu 22.04 / 24.04).
+- **Hardware:** 64-bit x86_64 or ARM64 processor, 8 GB+ RAM, 10 GB+ free disk space.
+- **Network:** Outbound HTTPS access to Ethereum Sepolia RPC endpoints, Google AI Studio, The Graph Subgraph Studio, and Chainlink CRE Developer APIs.
 
 ---
 
@@ -316,7 +316,8 @@ Before installing repository packages, ensure all required base compilers, runti
 
 #### Step 2.1: System Packages & Compilers
 
-* **On Ubuntu / Debian / WSL2:**
+- **On Ubuntu / Debian / WSL2:**
+
   ```bash
   sudo apt update && sudo apt install -y \
     curl \
@@ -332,7 +333,7 @@ Before installing repository packages, ensure all required base compilers, runti
     libvncserver-dev
   ```
 
-* **On macOS (using Homebrew):**
+- **On macOS (using Homebrew):**
   ```bash
   brew update && brew install \
     curl \
@@ -426,7 +427,8 @@ mkdir -p ~/rovaulta-speculos
   --apdu-port 9999 \
   ~/rovaulta-speculos/app-1.22.3-nanos2.elf
 ```
-*(Speculos exposes its HTTP REST controller on `http://127.0.0.1:5000` and APDU bridge on port `9999`).*
+
+_(Speculos exposes its HTTP REST controller on `http://127.0.0.1:5000` and APDU bridge on port `9999`)._
 
 ---
 
@@ -455,28 +457,29 @@ Rovaulta uses a root `.env` file for backend/contract services and an `apps/web/
 #### Step 4.1: Root Environment (`.env`)
 
 Copy the template:
+
 ```bash
 cp .env.example .env
 ```
 
 Ensure the following variables are configured in `.env`:
 
-| Variable | Recommended Value / Notes |
-|---|---|
-| `NODE_ENV` | `development` |
-| `WEB_ORIGIN` | `http://localhost:3000` |
-| `API_ORIGIN` | `http://localhost:4000` |
-| `NEXT_PUBLIC_API_ORIGIN` | `http://localhost:4000` |
-| `ROVAULTA_APP_DB_PATH` | `.data/rovaulta-app.sqlite` |
-| `ROVAULTA_RELEASE_DB_PATH` | `.data/rovaulta-release.sqlite` |
-| `EVM_CHAIN_ID` | `11155111` (Ethereum Sepolia) |
-| `SEPOLIA_RPC_URL` | Your Sepolia RPC URL (Alchemy / Infura / QuickNode) |
-| `SEPOLIA_DEPLOYER_PRIVATE_KEY` | 32-byte hex private key (funded with testnet Sepolia ETH) |
-| `ROVAULTA_AUTHORIZED_SIGNERS` | `0xDad77910DbDFdE764fC21FCD4E74D71bBACA6D8D,<YOUR_DEPLOYER_ADDRESS>` |
-| `GEMINI_API_KEY` | Google AI Studio API key |
-| `GEMINI_MODEL` | `gemini-3.5-flash-lite` (essential for high RPM and strict function-calling) |
-| `THE_GRAPH_STUDIO_QUERY_URL` | `https://api.studio.thegraph.com/query/1758964/rovaulta-registry/0.1.0` |
-| `NEXT_PUBLIC_LEDGER_DERIVATION_PATH` | `"44'/60'/0'/0/0"` *(MUST be quoted in double quotes)* |
+| Variable                             | Recommended Value / Notes                                                    |
+| ------------------------------------ | ---------------------------------------------------------------------------- |
+| `NODE_ENV`                           | `development`                                                                |
+| `WEB_ORIGIN`                         | `http://localhost:3000`                                                      |
+| `API_ORIGIN`                         | `http://localhost:4000`                                                      |
+| `NEXT_PUBLIC_API_ORIGIN`             | `http://localhost:4000`                                                      |
+| `ROVAULTA_APP_DB_PATH`               | `.data/rovaulta-app.sqlite`                                                  |
+| `ROVAULTA_RELEASE_DB_PATH`           | `.data/rovaulta-release.sqlite`                                              |
+| `EVM_CHAIN_ID`                       | `11155111` (Ethereum Sepolia)                                                |
+| `SEPOLIA_RPC_URL`                    | Your Sepolia RPC URL (Alchemy / Infura / QuickNode)                          |
+| `SEPOLIA_DEPLOYER_PRIVATE_KEY`       | 32-byte hex private key (funded with testnet Sepolia ETH)                    |
+| `ROVAULTA_AUTHORIZED_SIGNERS`        | `0xDad77910DbDFdE764fC21FCD4E74D71bBACA6D8D,<YOUR_DEPLOYER_ADDRESS>`         |
+| `GEMINI_API_KEY`                     | Google AI Studio API key                                                     |
+| `GEMINI_MODEL`                       | `gemini-3.5-flash-lite` (essential for high RPM and strict function-calling) |
+| `THE_GRAPH_STUDIO_QUERY_URL`         | `https://api.studio.thegraph.com/query/1758964/rovaulta-registry/0.1.0`      |
+| `NEXT_PUBLIC_LEDGER_DERIVATION_PATH` | `"44'/60'/0'/0/0"` _(MUST be quoted in double quotes)_                       |
 
 #### Step 4.2: Web Application Environment (`apps/web/.env.local`)
 
@@ -509,6 +512,7 @@ ln -s ../../.data apps/api/.data
 Rovaulta operates as a coordinated 4-process architecture during development and live demonstration.
 
 #### Terminal 1: Ledger Speculos Simulator
+
 ```bash
 cd ~/rovaulta-wsl
 /home/ian/rovaulta-speculos-venv/bin/speculos \
@@ -520,6 +524,7 @@ cd ~/rovaulta-wsl
 ```
 
 #### Terminal 2: Rovaulta Fastify API Server (Port 4000)
+
 ```bash
 cd ~/rovaulta-wsl
 set -a
@@ -531,16 +536,20 @@ export ROVAULTA_CRE_TARGET=staging-settings
 
 bun --env-file .env apps/api/src/index.ts
 ```
-*Health check:* `curl -s http://localhost:4000/health` should return `{"status":"ok"}`.
+
+_Health check:_ `curl -s http://localhost:4000/health` should return `{"status":"ok"}`.
 
 #### Terminal 3: Rovaulta Next.js Web UI (Port 3000)
+
 ```bash
 cd ~/rovaulta-wsl
 bun run --cwd apps/web dev
 ```
-*Access UI at:* <http://localhost:3000>
+
+_Access UI at:_ <http://localhost:3000>
 
 #### Terminal 4: Operator Command Line
+
 Keep this terminal ready for running evidence commands, evaluation passes, and on-chain registry transactions.
 
 ---
@@ -550,7 +559,9 @@ Keep this terminal ready for running evidence commands, evaluation passes, and o
 Here is the exact command sequence to execute a complete, fresh end-to-end evaluation, on-chain attestation, The Graph query, and Ledger release gate:
 
 #### 6.1: Clean-Slate Reset (Optional)
+
 To wipe test databases and start with completely fresh accounts:
+
 ```bash
 cd ~/rovaulta-wsl
 rm -f .data/rovaulta-app.sqlite* .data/rovaulta-release.sqlite* .data/clearance-*.json .data/p13-setup.json
@@ -558,6 +569,7 @@ bun run --cwd apps/api p13:setup-template
 ```
 
 #### 6.2: Run Confidential Evaluation (Chainlink CRE Simulation)
+
 ```bash
 export PATH="$HOME/.cre/bin:$PATH"
 
@@ -567,10 +579,13 @@ ROVAULTA_CRE_EXECUTION_MODE="simulation" \
 ROVAULTA_P13_SETUP_PATH=".data/p13-setup.json" \
 bun run --cwd apps/api p13:account-evaluation
 ```
-*Returns `status: "CLEAR"`, creating the site, robot, build, and confidential evaluation record.*
+
+_Returns `status: "CLEAR"`, creating the site, robot, build, and confidential evaluation record._
 
 #### 6.3: Record Clearance On-Chain to Sepolia
+
 Extract the fresh IDs dynamically and write the attestation to the RovaultaRegistry contract:
+
 ```bash
 NEW_ACCOUNT_ID=$(sqlite3 .data/rovaulta-app.sqlite "SELECT account_id FROM evaluations ORDER BY created_at DESC LIMIT 1;")
 NEW_EVAL_ID=$(sqlite3 .data/rovaulta-app.sqlite "SELECT json_extract(public_json, '$.evaluationId') FROM evaluations ORDER BY created_at DESC LIMIT 1;")
@@ -583,27 +598,33 @@ export ROVAULTA_CLEARANCE_OUTPUT_PATH=".data/clearance-live.json"
 
 bun --env-file .env apps/api/scripts/record-sepolia-clearance.ts
 ```
-*Outputs transaction hash on Sepolia, block number, and generates both `.data/clearance-live.json` and `.data/clearance-live.digest`.*
+
+_Outputs transaction hash on Sepolia, block number, and generates both `.data/clearance-live.json` and `.data/clearance-live.digest`._
 
 #### 6.4: Verify with The Graph Subgraph Studio
+
 ```bash
 export ROVAULTA_P11_CLEARANCE_DIGEST=$(bun apps/api/scripts/get-clearance-digest.ts)
 export THE_GRAPH_STUDIO_QUERY_URL='https://api.studio.thegraph.com/query/1758964/rovaulta-registry/0.1.0'
 
 bun run --cwd integrations/the-graph evidence:live
 ```
-*Returns `status: "FOUND"`, proving The Graph indexed the live Sepolia clearance event.*
+
+_Returns `status: "FOUND"`, proving The Graph indexed the live Sepolia clearance event._
 
 #### 6.5: Run Gemini Deployment-Agent Qualification
+
 ```bash
 ROVAULTA_P11_ACCOUNT_ID="$NEW_ACCOUNT_ID" \
 ROVAULTA_P11_CLEARANCE_PATH=".data/clearance-live.json" \
 ROVAULTA_P11_SIGNER_ADDRESS="0xDad77910DbDFdE764fC21FCD4E74D71bBACA6D8D" \
 bun run --cwd apps/api evidence:p11-graph
 ```
-*Executes all 7 qualification tool-calls and halts at `LEDGER_APPROVAL_REQUIRED`.*
+
+_Executes all 7 qualification tool-calls and halts at `LEDGER_APPROVAL_REQUIRED`._
 
 #### 6.6: Human Ledger Hardware Gate in the Browser
+
 1. Open <http://localhost:3000/start> and sign in (`operator@warehouse.io` / `Password12345!`).
 2. Navigate to **Releases** (`/app/releases`).
 3. Under **Authorized signer address**, enter `0xDad77910DbDFdE764fC21FCD4E74D71bBACA6D8D`.
@@ -625,6 +646,7 @@ ROVAULTA_ENABLE_DEMO_ROUTES=true bun run dev
 ```
 
 In another terminal:
+
 ```bash
 bun run demo:run         # Runs deterministic A/B/C safety trace
 bun run demo:rehearse    # Runs Playwright browser test against the digital twin
@@ -635,15 +657,15 @@ bun run demo:reset       # Safely clears demo fixture directory
 
 ### 8. Common Pitfalls & Troubleshooting
 
-* **`The public clearance does not match this exact evaluation`**:  
+- **`The public clearance does not match this exact evaluation`**:
   Ensure you query `json_extract(public_json, '$.evaluationId')` from SQLite instead of using the raw database row ID (`evaluation-record:<hex>`). The row ID is an internal storage key, while the evaluation ID is the canonical domain identifier bound to the clearance.
-* **`bash: .env: line XX: unexpected EOF while looking for matching ''`**:  
+- **`bash: .env: line XX: unexpected EOF while looking for matching ''`**:
   In your `.env` file, ensure `NEXT_PUBLIC_LEDGER_DERIVATION_PATH="44'/60'/0'/0/0"` is wrapped in double quotes to prevent bash from treating single quotes as unterminated string literals during `source .env`.
-* **Chrome WebHID Popup appears**:  
+- **Chrome WebHID Popup appears**:
   Ensure `apps/web/.env.local` contains `NEXT_PUBLIC_LEDGER_TRANSPORT=speculos`. Next.js does not inherit client-side variables from the root `.env` unless declared in `apps/web/.env.local`.
-* **`ROVAULTA_P11_CLEARANCE_DIGEST must be a 32-byte public clearance digest`**:  
+- **`ROVAULTA_P11_CLEARANCE_DIGEST must be a 32-byte public clearance digest`**:
   Use `bun apps/api/scripts/get-clearance-digest.ts` or read `.data/clearance-live.digest`. The 32-byte digest is computed cryptographically from the record fields and is not a plain string in `clearance-live.json`.
-* **`ApplicationError: Evaluation was not found`**:  
+- **`ApplicationError: Evaluation was not found`**:
   Ensure `apps/api/.data` is a symlink to `../../.data` (`ln -s ../../.data apps/api/.data`). Otherwise, commands executed with `--cwd apps/api` will look in an empty child database.
 
 ## Testing
