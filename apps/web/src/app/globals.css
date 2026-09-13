@@ -6228,3 +6228,42 @@ pre {
     transition: none;
   }
 }
+
+/* Keep the desktop workspace rail attached to the viewport while the main pane scrolls. */
+.product-shell .product-sidebar {
+  position: fixed;
+  z-index: 3;
+  inset: 0 auto 0 0;
+  width: 250px;
+  min-height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--product-surface);
+}
+
+.product-shell .product-main {
+  grid-column: 2;
+}
+
+@media (max-width: 860px) and (min-width: 681px) {
+  .product-shell .product-sidebar {
+    width: 214px;
+  }
+}
+
+@media (max-width: 680px) {
+  .product-shell .product-sidebar {
+    position: static;
+    width: auto;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    overscroll-behavior: auto;
+  }
+
+  .product-shell .product-main {
+    grid-column: auto;
+  }
+}

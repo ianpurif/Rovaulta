@@ -296,157 +296,355 @@ The current public registry identity is:
 The contract does not contain private envelope data, parse canonical JSON, prove that CRE ran, or
 authorize a deployment by itself.
 
-## Run locally
+## Local Setup & Development Guide
 
-### Prerequisites
+This guide covers everything required to set up, build, and run Rovaulta locally on **any machine** (Linux, macOS, or Windows via WSL2). Following these instructions guarantees complete reproducibility across environments.
 
-- Git 2.40+
-- Bun 1.4.x (the repository requires Bun `>=1.2.21`)
-- Chromium/Chrome for browser tests and optional WebHID work
-- Foundry (`forge`, `anvil`, `cast`) for contract tests
+---
 
-### Development fixture rehearsal
+### 1. System Requirements & Architecture
 
-This path does not call Gemini, Sepolia, CRE, Ledger, or Speculos. It uses the checked-in P2
-fixture, a local registry reader, the existing P5.2 controller, and a demo-only fixed nonce.
+* **Operating System:** Linux (Ubuntu 22.04 / 24.04 LTS recommended), macOS 13+ (Ventura / Sonoma / Sequoia), or Windows 10 / 11 running **WSL2** (Ubuntu 22.04 / 24.04).
+* **Hardware:** 64-bit x86_64 or ARM64 processor, 8 GB+ RAM, 10 GB+ free disk space.
+* **Network:** Outbound HTTPS access to Ethereum Sepolia RPC endpoints, Google AI Studio, The Graph Subgraph Studio, and Chainlink CRE Developer APIs.
+
+---
+
+### 2. Install Required System Toolchain
+
+Before installing repository packages, ensure all required base compilers, runtimes, and simulators are installed on your host machine.
+
+#### Step 2.1: System Packages & Compilers
+
+* **On Ubuntu / Debian / WSL2:**
+  ```bash
+  sudo apt update && sudo apt install -y \
+    curl \
+    git \
+    build-essential \
+    sqlite3 \
+    python3 \
+    python3-venv \
+    python3-pip \
+    qemu-user-static \
+    libjpeg-dev \
+    zlib1g-dev \
+    libvncserver-dev
+  ```
+
+* **On macOS (using Homebrew):**
+  ```bash
+  brew update && brew install \
+    curl \
+    git \
+    sqlite \
+    node \
+    python@3.12
+  ```
+
+#### Step 2.2: Bun Runtime (Primary Engine)
+
+Rovaulta uses [Bun](https://bun.sh/) (`>=1.2.21`, tested on `1.4.x`) as its primary runtime, monorepo manager, and test runner:
 
 ```bash
+curl -fsSL https://bun.sh/install | bash
+
+# Reload your shell profile:
+source ~/.bashrc   # or source ~/.zshrc
+
+# Verify installation:
+bun --version
+```
+
+#### Step 2.3: Node.js (Tooling & Subgraph Codegen)
+
+Node.js `v20+` or `v22+` is required for The Graph CLI codegen and Playwright test execution:
+
+```bash
+# Ubuntu / Debian / WSL2:
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Verify installation:
+node --version
+npm --version
+```
+
+#### Step 2.4: Foundry (Smart Contract Toolchain)
+
+[Foundry](https://getfoundry.sh/) is required to compile and test the `RovaultaRegistry` Solidity contracts:
+
+```bash
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
+
+# Verify installation:
+forge --version
+cast --version
+```
+
+#### Step 2.5: Chainlink CRE CLI (Confidential Runtime)
+
+The official Chainlink CRE CLI is required for running local authenticated confidential simulation passes:
+
+```bash
+# Install the CRE CLI:
+curl -sSf https://raw.githubusercontent.com/smartcontractkit/cre-cli/main/install.sh | bash
+
+# Ensure CRE is in your PATH:
+export PATH="$HOME/.cre/bin:$PATH"
+echo 'export PATH="$HOME/.cre/bin:$PATH"' >> ~/.bashrc
+
+# Verify installation:
+cre version    # Verified on v1.33.0
+
+# Authenticate with your Chainlink Developer credentials:
+cre login
+cre whoami     # Must display active organization and deploy access
+```
+
+#### Step 2.6: Ledger Speculos Simulator (Hardware Approval Gate)
+
+[Speculos](https://github.com/LedgerHQ/speculos) provides the official software emulation of Ledger hardware (Nano S Plus) over loopback HTTP and APDU ports, allowing full validation of the hardware Clear Signing gate without requiring a physical USB Ledger device:
+
+```bash
+# 1. Create a dedicated Python virtual environment for Speculos
+python3 -m venv ~/rovaulta-speculos-venv
+~/rovaulta-speculos-venv/bin/pip install --upgrade pip
+~/rovaulta-speculos-venv/bin/pip install speculos
+
+# 2. Set up the official Ledger Nano S Plus Ethereum application ELF binary
+mkdir -p ~/rovaulta-speculos
+# Place the app-1.22.3-nanos2.elf binary in ~/rovaulta-speculos/
+# (The Nano S Plus Ethereum application v1.22.3 is pre-built from Ledger's official app repository)
+
+# 3. Test running Speculos in headless mode:
+~/rovaulta-speculos-venv/bin/speculos \
+  --model nanosp \
+  --display headless \
+  --api-port 5000 \
+  --apdu-port 9999 \
+  ~/rovaulta-speculos/app-1.22.3-nanos2.elf
+```
+*(Speculos exposes its HTTP REST controller on `http://127.0.0.1:5000` and APDU bridge on port `9999`).*
+
+---
+
+### 3. Clone & Build Rovaulta
+
+```bash
+git clone https://github.com/your-org/rovaulta.git ~/rovaulta-wsl
+cd ~/rovaulta-wsl
+
+# 1. Install all monorepo dependencies
 bun install --frozen-lockfile
+
+# 2. Compile smart contracts
+bun run contracts:build
+
+# 3. Verify workspace scaffold and directory integrity
 bun run verify:scaffold
-bun run demo:setup
-# Bash/macOS/Linux:
+```
+
+---
+
+### 4. Environment Configuration
+
+Rovaulta uses a root `.env` file for backend/contract services and an `apps/web/.env.local` file for the Next.js frontend.
+
+#### Step 4.1: Root Environment (`.env`)
+
+Copy the template:
+```bash
+cp .env.example .env
+```
+
+Ensure the following variables are configured in `.env`:
+
+| Variable | Recommended Value / Notes |
+|---|---|
+| `NODE_ENV` | `development` |
+| `WEB_ORIGIN` | `http://localhost:3000` |
+| `API_ORIGIN` | `http://localhost:4000` |
+| `NEXT_PUBLIC_API_ORIGIN` | `http://localhost:4000` |
+| `ROVAULTA_APP_DB_PATH` | `.data/rovaulta-app.sqlite` |
+| `ROVAULTA_RELEASE_DB_PATH` | `.data/rovaulta-release.sqlite` |
+| `EVM_CHAIN_ID` | `11155111` (Ethereum Sepolia) |
+| `SEPOLIA_RPC_URL` | Your Sepolia RPC URL (Alchemy / Infura / QuickNode) |
+| `SEPOLIA_DEPLOYER_PRIVATE_KEY` | 32-byte hex private key (funded with testnet Sepolia ETH) |
+| `ROVAULTA_AUTHORIZED_SIGNERS` | `0xDad77910DbDFdE764fC21FCD4E74D71bBACA6D8D,<YOUR_DEPLOYER_ADDRESS>` |
+| `GEMINI_API_KEY` | Google AI Studio API key |
+| `GEMINI_MODEL` | `gemini-3.5-flash-lite` (essential for high RPM and strict function-calling) |
+| `THE_GRAPH_STUDIO_QUERY_URL` | `https://api.studio.thegraph.com/query/1758964/rovaulta-registry/0.1.0` |
+| `NEXT_PUBLIC_LEDGER_DERIVATION_PATH` | `"44'/60'/0'/0/0"` *(MUST be quoted in double quotes)* |
+
+#### Step 4.2: Web Application Environment (`apps/web/.env.local`)
+
+To ensure Next.js communicates with the local Speculos emulator instead of opening Chrome WebHID popups:
+
+```bash
+cat << 'EOF' > apps/web/.env.local
+NEXT_PUBLIC_LEDGER_TRANSPORT=speculos
+NEXT_PUBLIC_LEDGER_SPECULOS_URL=http://127.0.0.1:5000
+NEXT_PUBLIC_LEDGER_ORIGIN_TOKEN=
+NEXT_PUBLIC_LEDGER_DERIVATION_PATH="44'/60'/0'/0/0"
+NEXT_PUBLIC_API_ORIGIN=http://localhost:4000
+EOF
+```
+
+#### Step 4.3: Database Storage & Symlinks
+
+To ensure scripts running from subdirectories share the exact same database as the main API server:
+
+```bash
+mkdir -p .data
+rm -rf apps/api/.data
+ln -s ../../.data apps/api/.data
+```
+
+---
+
+### 5. Running the Application
+
+Rovaulta operates as a coordinated 4-process architecture during development and live demonstration.
+
+#### Terminal 1: Ledger Speculos Simulator
+```bash
+cd ~/rovaulta-wsl
+/home/ian/rovaulta-speculos-venv/bin/speculos \
+  --model nanosp \
+  --display headless \
+  --api-port 5000 \
+  --apdu-port 9999 \
+  /home/ian/rovaulta-speculos/app-1.22.3-nanos2.elf
+```
+
+#### Terminal 2: Rovaulta Fastify API Server (Port 4000)
+```bash
+cd ~/rovaulta-wsl
+set -a
+source .env
+set +a
+export ROVAULTA_CRE_EXECUTION_MODE=simulation
+export ROVAULTA_CRE_CLI=cre
+export ROVAULTA_CRE_TARGET=staging-settings
+
+bun --env-file .env apps/api/src/index.ts
+```
+*Health check:* `curl -s http://localhost:4000/health` should return `{"status":"ok"}`.
+
+#### Terminal 3: Rovaulta Next.js Web UI (Port 3000)
+```bash
+cd ~/rovaulta-wsl
+bun run --cwd apps/web dev
+```
+*Access UI at:* <http://localhost:3000>
+
+#### Terminal 4: Operator Command Line
+Keep this terminal ready for running evidence commands, evaluation passes, and on-chain registry transactions.
+
+---
+
+### 6. End-to-End Live Workflow Commands
+
+Here is the exact command sequence to execute a complete, fresh end-to-end evaluation, on-chain attestation, The Graph query, and Ledger release gate:
+
+#### 6.1: Clean-Slate Reset (Optional)
+To wipe test databases and start with completely fresh accounts:
+```bash
+cd ~/rovaulta-wsl
+rm -f .data/rovaulta-app.sqlite* .data/rovaulta-release.sqlite* .data/clearance-*.json .data/p13-setup.json
+bun run --cwd apps/api p13:setup-template
+```
+
+#### 6.2: Run Confidential Evaluation (Chainlink CRE Simulation)
+```bash
+export PATH="$HOME/.cre/bin:$PATH"
+
+ROVAULTA_P13_EMAIL="operator@warehouse.io" \
+ROVAULTA_P13_PASSWORD="Password12345!" \
+ROVAULTA_CRE_EXECUTION_MODE="simulation" \
+ROVAULTA_P13_SETUP_PATH=".data/p13-setup.json" \
+bun run --cwd apps/api p13:account-evaluation
+```
+*Returns `status: "CLEAR"`, creating the site, robot, build, and confidential evaluation record.*
+
+#### 6.3: Record Clearance On-Chain to Sepolia
+Extract the fresh IDs dynamically and write the attestation to the RovaultaRegistry contract:
+```bash
+NEW_ACCOUNT_ID=$(sqlite3 .data/rovaulta-app.sqlite "SELECT account_id FROM evaluations ORDER BY created_at DESC LIMIT 1;")
+NEW_EVAL_ID=$(sqlite3 .data/rovaulta-app.sqlite "SELECT json_extract(public_json, '$.evaluationId') FROM evaluations ORDER BY created_at DESC LIMIT 1;")
+
+export ROVAULTA_CLEARANCE_ACCOUNT_ID="$NEW_ACCOUNT_ID"
+export ROVAULTA_CLEARANCE_EVALUATION_ID="$NEW_EVAL_ID"
+export ROVAULTA_CLEARANCE_ID="clearance:demo-$(date +%s)"
+export ROVAULTA_CLEARANCE_CONFIRM="YES"
+export ROVAULTA_CLEARANCE_OUTPUT_PATH=".data/clearance-live.json"
+
+bun --env-file .env apps/api/scripts/record-sepolia-clearance.ts
+```
+*Outputs transaction hash on Sepolia, block number, and generates both `.data/clearance-live.json` and `.data/clearance-live.digest`.*
+
+#### 6.4: Verify with The Graph Subgraph Studio
+```bash
+export ROVAULTA_P11_CLEARANCE_DIGEST=$(bun apps/api/scripts/get-clearance-digest.ts)
+export THE_GRAPH_STUDIO_QUERY_URL='https://api.studio.thegraph.com/query/1758964/rovaulta-registry/0.1.0'
+
+bun run --cwd integrations/the-graph evidence:live
+```
+*Returns `status: "FOUND"`, proving The Graph indexed the live Sepolia clearance event.*
+
+#### 6.5: Run Gemini Deployment-Agent Qualification
+```bash
+ROVAULTA_P11_ACCOUNT_ID="$NEW_ACCOUNT_ID" \
+ROVAULTA_P11_CLEARANCE_PATH=".data/clearance-live.json" \
+ROVAULTA_P11_SIGNER_ADDRESS="0xDad77910DbDFdE764fC21FCD4E74D71bBACA6D8D" \
+bun run --cwd apps/api evidence:p11-graph
+```
+*Executes all 7 qualification tool-calls and halts at `LEDGER_APPROVAL_REQUIRED`.*
+
+#### 6.6: Human Ledger Hardware Gate in the Browser
+1. Open <http://localhost:3000/start> and sign in (`operator@warehouse.io` / `Password12345!`).
+2. Navigate to **Releases** (`/app/releases`).
+3. Under **Authorized signer address**, enter `0xDad77910DbDFdE764fC21FCD4E74D71bBACA6D8D`.
+4. Paste the exact contents of `.data/clearance-live.json` into **Public P4 clearance record**.
+5. Click **Prepare release →** (Gemini prepares the EIP-712 payload).
+6. Click **Continue to human Ledger approval →** (navigates to `/p5-ledger`).
+7. Click **Connect Ledger** (connects loopback Speculos emulator).
+8. Click **Sign deployment intent** (truthfully halts at `CLEAR_SIGNING_UNAVAILABLE`, refusing to blind-sign).
+
+---
+
+### 7. Alternative: Fast Offline Deterministic Rehearsal
+
+If you are developing offline without internet access or live API keys, you can run the self-contained deterministic rehearsal path:
+
+```bash
+bun run demo:setup       # Creates isolated .data/rovaulta-demo fixture
 ROVAULTA_ENABLE_DEMO_ROUTES=true bun run dev
-# PowerShell:
-# $env:ROVAULTA_ENABLE_DEMO_ROUTES="true"; bun run dev
 ```
 
-Open <http://localhost:3000/dev-fixtures/evaluate> for the explicit fixture route. In another terminal:
-
+In another terminal:
 ```bash
-bun run demo:reset       # removes only .data/rovaulta-demo; safe to repeat
-bun run demo:run         # repeats the public A/B/C trace
-bun run demo:rehearse   # runs the focused Playwright judge flow
+bun run demo:run         # Runs deterministic A/B/C safety trace
+bun run demo:rehearse    # Runs Playwright browser test against the digital twin
+bun run demo:reset       # Safely clears demo fixture directory
 ```
 
-`bun run demo:setup` creates only ignored state under `.data/rovaulta-demo`. It never resets source
-fixtures, deployment artifacts, evidence, environment files, or the normal release database.
+---
 
-### Start the normal account-backed services
+### 8. Common Pitfalls & Troubleshooting
 
-```bash
-cp .env.example .env.local
-# PowerShell equivalent: Copy-Item .env.example .env.local
-bun install
-bun run dev
-```
-
-The product creates an account-backed local store under `.data/` by default. The web shell is useful
-without live provider configuration; the API correctly reports the release agent as unavailable
-until its real RPC, signer, catalog, and provider configuration are present. It does not substitute
-the offline scripted rehearsal as a product result.
-
-### Optional live API configuration
-
-Keep real values in ignored local environment files. Never commit keys, private keys, origin tokens,
-envelope blinds, signatures, or confidential CRE payloads.
-
-| Variable                           | Used for                                                 |
-| ---------------------------------- | -------------------------------------------------------- |
-| `EVM_RPC_URL` or `SEPOLIA_RPC_URL` | Read-only Sepolia registry access                        |
-| `ROVAULTA_AUTHORIZED_SIGNERS`     | Public Ledger signer allowlist                           |
-| `ROVAULTA_RELEASE_DB_PATH`        | SQLite release/nonce state                               |
-| `ROVAULTA_APP_DB_PATH`             | SQLite account/site/build/evaluation state               |
-| `ROVAULTA_POLICY_ENCRYPTION_KEY`   | 32-byte hex key for encrypted site policies              |
-| `ROVAULTA_POLICY_KEY_PATH`         | Local ignored key-file fallback when the key is unset    |
-| `GEMINI_API_KEY`                   | Server-side Google AI Studio key (required for the real agent) |
-| `GEMINI_MODEL`                     | Gemini model override (defaults to `gemini-2.5-flash`)       |
-| `ROVAULTA_AGENT_CATALOG_PATH`     | Public deployment catalog path                           |
-| `ROVAULTA_CRE_GATEWAY_URL`       | Deployed CRE HTTP gateway URL (server-only)              |
-| `ROVAULTA_CRE_EXECUTION_MODE`    | `gateway` (default) or explicit `simulation` for the official CRE CLI |
-| `CHAINLINK_CRE_WORKFLOW_ID`      | Deployed CRE workflow ID (server-only)                   |
-| `CHAINLINK_CRE_TRIGGER_PRIVATE_KEY` | Authorized CRE HTTP trigger key (server-only)         |
-| `ROVAULTA_CRE_RESULT_CALLBACK_SECRET` | API-only HMAC key for the TEE public-result callback |
-| `THE_GRAPH_API_KEY`               | The Graph Gateway API key (server-only)                  |
-| `THE_GRAPH_SUBGRAPH_ID`           | Hosted Rovaulta Sepolia subgraph ID (server-only)        |
-| `THE_GRAPH_API_URL`               | Optional Graph Gateway base URL                          |
-| `THE_GRAPH_STUDIO_QUERY_URL`      | Optional direct hosted Subgraph Studio query URL         |
-| `GRAPH_SUBGRAPH_SLUG`             | Operator-only Subgraph Studio deployment slug           |
-| `GRAPH_DEPLOY_KEY`                | Operator-only Subgraph Studio deploy key                |
-| `GRAPH_VERSION_LABEL`             | Hosted subgraph version label                            |
-| `ROVAULTA_P11_ACCOUNT_ID`         | Operator-only live account evidence input               |
-| `ROVAULTA_P11_CLEARANCE_PATH`     | Public clearance JSON for live evidence                  |
-| `ROVAULTA_P11_SIGNER_ADDRESS`     | Public Ledger signer address for live evidence           |
-| `SEPOLIA_REGISTRAR_PRIVATE_KEY`   | Operator-only authorized Sepolia registrar key           |
-| `ROVAULTA_CLEARANCE_CONFIRM`      | Must be `YES` to authorize one registry write             |
-| `ROVAULTA_CLEARANCE_ACCOUNT_ID`   | Existing account that owns the evaluation                 |
-| `ROVAULTA_CLEARANCE_EVALUATION_ID` | Existing account evaluation with public `CLEAR` result  |
-| `ROVAULTA_CLEARANCE_ID`            | New unique public clearance identifier                   |
-| `ROVAULTA_CLEARANCE_TTL_SECONDS`  | Clearance lifetime from the latest Sepolia block         |
-| `ROVAULTA_CLEARANCE_OUTPUT_PATH`  | Optional public-only clearance JSON output path          |
-| `NEXT_PUBLIC_LEDGER_TRANSPORT`     | `webhid` by default; `speculos` only in development/test |
-| `NEXT_PUBLIC_LEDGER_ORIGIN_TOKEN`  | Partner-issued signing-origin token, when available      |
-
-The complete variable list is in [`.env.example`](.env.example). The API catalog must contain public
-canonical targets and clearance records only; it must never contain a private safety envelope or
-blind. See [`apps/api/README.md`](apps/api/README.md) for the exact request grammar and endpoints.
-
-### Run an account-owned official CRE simulation
-
-When a deployed CRE gateway is unavailable, the normal account application can use the explicit
-`ROVAULTA_CRE_EXECUTION_MODE=simulation` mode. It still creates the site, robot, and build through
-the authenticated routes, invokes the unchanged official `handlerInTee` workflow through the CRE CLI,
-validates the public result and exact P1 bindings, and stores only the public
-evaluation plus `official-cre-cli-simulation` provenance. The executor creates and deletes a
-temporary request-scoped `secretsNames` mapping and `-e` environment file; it never uses the local
-P2 evaluator as a fallback and never claims live CRE/DON execution. The CLI version and `cre whoami`
-checks must succeed first. See the [API runbook](apps/api/README.md#account-owned-official-cre-cli-simulation-mode).
-
-From a clean checkout, the documented two-phase operator flow starts with
-`bun run --cwd apps/api p13:setup-template`, which copies the safe tracked template to the ignored
-`apps/api/.data/p13-setup.json`. Set `ROVAULTA_P13_EMAIL`, `ROVAULTA_P13_PASSWORD`,
-`ROVAULTA_P13_SETUP_PATH=.data/p13-setup.json`, and `ROVAULTA_P13_SETUP_ONLY=true`, then run
-`bun run --cwd apps/api p13:account-evaluation`. The command registers a new account or signs into
-an existing one, creates the account-owned site/robot/build, and prints their public IDs. Reuse those
-IDs by unsetting `ROVAULTA_P13_SETUP_PATH` (or exporting it as an empty value if the root `.env`
-provides a default), setting `ROVAULTA_P13_SETUP_ONLY=false` plus the three ID variables, and
-running the command again. The setup template contains no credentials or private
-facility policy; replace its example policy, route, and build digest locally before evaluation. The
-operator password must be 12–256 characters, and an existing account must use its original exact
-password; this flow does not reset credentials. Before setup-only, clear any stale
-`ROVAULTA_P13_ACCOUNT_ID`, `ROVAULTA_P13_SITE_ID`, `ROVAULTA_P13_ROBOT_ID`, and
-`ROVAULTA_P13_BUILD_ID` exports so resources are created in the current API database.
-
-### Record one real account clearance on Sepolia
-
-After an account-owned `CLEAR` evaluation has completed through either the explicit authenticated CRE
-CLI simulation mode or a configured CRE result boundary, an operator can attest that exact public
-result in the already deployed registry.
-The command reads the account-scoped evaluation from the existing API database, derives the P1
-clearance and P4 bytes32 transport, checks the pinned Sepolia contract and registrar authorization,
-simulates `recordClearance`, waits for one confirmation, validates both registry events, and performs
-the existing exact-binding readback. It never reads or prints the encrypted policy, envelope, blind,
-credentials, or confidential evaluation data.
-
-PowerShell example (replace the account/evaluation/clearance identifiers with real values):
-
-```powershell
-$env:ROVAULTA_CLEARANCE_CONFIRM="YES"
-$env:ROVAULTA_CLEARANCE_ACCOUNT_ID="account:<account-token>"
-$env:ROVAULTA_CLEARANCE_EVALUATION_ID="evaluation:<evaluation-token>"
-$env:ROVAULTA_CLEARANCE_ID="clearance:<unique-token>"
-$env:ROVAULTA_CLEARANCE_TTL_SECONDS="604800"
-$env:ROVAULTA_CLEARANCE_OUTPUT_PATH=".data/clearance-account-001.json"
-# Prefer a dedicated SEPOLIA_REGISTRAR_PRIVATE_KEY in the ignored .env. The existing deployer key
-# is accepted as a fallback for the deployed initial registrar; never paste a key into the command.
-bun run --cwd apps/api record:sepolia-clearance
-```
-
-The command prints only public confirmation data: chain/contract, transaction and block, issuer,
-clearance/build digests, exact public bindings, expiry, and the two event-presence checks. The output
-JSON is suitable for the existing P5/P11 public-clearance input. A successful transaction is the
-required prerequisite for The Graph to index the clearance; indexing remains eventually consistent.
-If the account database, completed `CLEAR` evaluation, funded authorized registrar, or Sepolia RPC
-is missing, the command stops before broadcast.
+* **`The public clearance does not match this exact evaluation`**:  
+  Ensure you query `json_extract(public_json, '$.evaluationId')` from SQLite instead of using the raw database row ID (`evaluation-record:<hex>`). The row ID is an internal storage key, while the evaluation ID is the canonical domain identifier bound to the clearance.
+* **`bash: .env: line XX: unexpected EOF while looking for matching ''`**:  
+  In your `.env` file, ensure `NEXT_PUBLIC_LEDGER_DERIVATION_PATH="44'/60'/0'/0/0"` is wrapped in double quotes to prevent bash from treating single quotes as unterminated string literals during `source .env`.
+* **Chrome WebHID Popup appears**:  
+  Ensure `apps/web/.env.local` contains `NEXT_PUBLIC_LEDGER_TRANSPORT=speculos`. Next.js does not inherit client-side variables from the root `.env` unless declared in `apps/web/.env.local`.
+* **`ROVAULTA_P11_CLEARANCE_DIGEST must be a 32-byte public clearance digest`**:  
+  Use `bun apps/api/scripts/get-clearance-digest.ts` or read `.data/clearance-live.digest`. The 32-byte digest is computed cryptographically from the record fields and is not a plain string in `clearance-live.json`.
+* **`ApplicationError: Evaluation was not found`**:  
+  Ensure `apps/api/.data` is a symlink to `../../.data` (`ln -s ../../.data apps/api/.data`). Otherwise, commands executed with `--cwd apps/api` will look in an empty child database.
 
 ## Testing
 

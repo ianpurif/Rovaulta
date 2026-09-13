@@ -14,6 +14,7 @@
     "p13:account-evaluation": "bun run --env-file ../../.env scripts/p13-account-evaluation.ts",
     "p13:provision-site-secret": "bun run --env-file ../../.env scripts/p13-provision-site-secret.ts",
     "record:sepolia-clearance": "bun run --env-file ../../.env scripts/record-sepolia-clearance.ts",
+    "clearance:digest": "bun scripts/get-clearance-digest.ts",
     "evidence:p5-presign": "bun run --env-file ../../.env scripts/p5-presign-evidence.ts",
     "typecheck": "tsc --noEmit -p tsconfig.test.json",
     "test": "bun test"

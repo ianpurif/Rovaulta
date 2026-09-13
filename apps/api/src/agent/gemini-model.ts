@@ -86,10 +86,31 @@ export class GeminiDeploymentModel implements DeploymentAgentModel {
     };
 
     let response: unknown;
-    try {
-      response = await this.#client.models.generateContent(parameters);
-    } catch {
-      throw new DeploymentAgentError("PROVIDER_FAILED", "AI provider request failed closed");
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      try {
+        parameters.config = {
+          ...parameters.config,
+          abortSignal: AbortSignal.timeout(15_000),
+        };
+        response = await this.#client.models.generateContent(parameters);
+        break;
+      } catch (error: unknown) {
+        const errorMessage = error !== null && typeof error === "object" && "message" in error ? String((error as { message: unknown }).message) : "";
+        const isRateLimit =
+          (error !== null && typeof error === "object" && "status" in error && ((error as { status?: unknown }).status === 429 || (error as { status?: unknown }).status === 503)) ||
+          errorMessage.includes("429") ||
+          errorMessage.includes("503") ||
+          errorMessage.includes("high demand") ||
+          errorMessage.includes("RESOURCE_EXHAUSTED");
+        if (attempt < 3 && isRateLimit) {
+          const match = errorMessage.match(/retry in ([0-9.]+)s/i) || errorMessage.match(/"retryDelay":\s*"([0-9]+)s"/i);
+          const waitMs = match && match[1] ? Math.min(65_000, Math.ceil(parseFloat(match[1])) * 1000 + 1000) : 2000 * (attempt + 1);
+          console.warn(`[gemini-model] Provider error (429/503); waiting ${waitMs / 1000}s before retry (attempt ${attempt + 1})...`);
+          await new Promise((resolve) => setTimeout(resolve, waitMs));
+          continue;
+        }
+        throw new DeploymentAgentError("PROVIDER_FAILED", "AI provider request failed closed");
+      }
     }
 
     if (!isRecord(response)) {

@@ -256,8 +256,13 @@ async function run(): Promise<void> {
     if (!snapshot.exactMatch || snapshot.stored === null) {
       throw new Error("Confirmed registry state did not match the requested clearance");
     }
-    if (outputPath !== undefined && outputPath.length > 0)
+    if (outputPath !== undefined && outputPath.length > 0) {
       writePublicClearance(outputPath, clearance);
+      const digestPath = outputPath.endsWith(".json")
+        ? outputPath.replace(/\.json$/, ".digest")
+        : `${outputPath}.digest`;
+      writeFileSync(resolve(process.cwd(), digestPath), `${transport.clearanceDigest}\n`, "utf8");
+    }
 
     console.log(
       JSON.stringify(

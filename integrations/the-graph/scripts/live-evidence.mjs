@@ -1,10 +1,24 @@
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 const apiKey = process.env.THE_GRAPH_API_KEY?.trim();
 const subgraphId = process.env.THE_GRAPH_SUBGRAPH_ID?.trim();
 const studioQueryUrl = process.env.THE_GRAPH_STUDIO_QUERY_URL?.trim();
 const endpoint = (
   process.env.THE_GRAPH_API_URL?.trim() || "https://gateway.thegraph.com/api"
 ).replace(/\/$/u, "");
-const clearanceDigest = process.env.ROVAULTA_P11_CLEARANCE_DIGEST?.trim();
+let clearanceDigest = process.env.ROVAULTA_P11_CLEARANCE_DIGEST?.trim();
+if (!clearanceDigest || !/^0x[0-9a-fA-F]{64}$/.test(clearanceDigest)) {
+  for (const candidate of [
+    resolve(process.cwd(), ".data/clearance-live.digest"),
+    resolve(process.cwd(), "../../.data/clearance-live.digest"),
+  ]) {
+    if (existsSync(candidate)) {
+      clearanceDigest = readFileSync(candidate, "utf8").trim();
+      break;
+    }
+  }
+}
 
 const studioQueryPattern =
   /^https:\/\/api\.studio\.thegraph\.com\/query\/[0-9]+\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}\/[A-Za-z0-9][A-Za-z0-9._-]{0,63}\/?$/u;

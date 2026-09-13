@@ -1412,29 +1412,102 @@ function EvaluateView({
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedBuildId = searchParams.get("build");
+  const requestedSiteId = searchParams.get("site");
+  const requestedRobotId = searchParams.get("robot");
+  const requestedBuild = data.builds.find((build) => build.id === requestedBuildId);
+  const initialSiteId =
+    requestedBuild?.siteId ??
+    (requestedSiteId !== null && data.sites.some((site) => site.id === requestedSiteId)
+      ? requestedSiteId
+      : (data.sites[0]?.id ?? ""));
+  const initialRobots = data.robots.filter((robot) => robot.siteId === initialSiteId);
+  const initialRobotId =
+    requestedBuild?.robotId ??
+    (requestedRobotId !== null && initialRobots.some((robot) => robot.id === requestedRobotId)
+      ? requestedRobotId
+      : (initialRobots[0]?.id ?? ""));
   const initialBuildId =
-    requestedBuildId !== null && data.builds.some((build) => build.id === requestedBuildId)
-      ? requestedBuildId
-      : (data.builds[0]?.id ?? "");
+    requestedBuild !== undefined &&
+    requestedBuild.siteId === initialSiteId &&
+    requestedBuild.robotId === initialRobotId
+      ? requestedBuild.id
+      : (data.builds.find(
+          (build) => build.siteId === initialSiteId && build.robotId === initialRobotId,
+        )?.id ?? "");
+  const [selectedSiteId, setSelectedSiteId] = useState(initialSiteId);
+  const [selectedRobotId, setSelectedRobotId] = useState(initialRobotId);
   const [selectedBuildId, setSelectedBuildId] = useState(initialBuildId);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const robotsForSite = data.robots.filter((robot) => robot.siteId === selectedSiteId);
+  const buildsForRobot = data.builds.filter(
+    (build) => build.siteId === selectedSiteId && build.robotId === selectedRobotId,
+  );
+
   useEffect(() => {
-    const nextBuildId =
-      requestedBuildId !== null && data.builds.some((build) => build.id === requestedBuildId)
-        ? requestedBuildId
-        : (data.builds[0]?.id ?? "");
-    if (
-      nextBuildId !== "" &&
-      (requestedBuildId !== null || !data.builds.some((build) => build.id === selectedBuildId)) &&
-      nextBuildId !== selectedBuildId
-    )
-      setSelectedBuildId(nextBuildId);
-  }, [data.builds, requestedBuildId, selectedBuildId]);
-  const selected = data.builds.find((build) => build.id === selectedBuildId);
+    if (data.sites.length === 0) {
+      if (selectedSiteId !== "") setSelectedSiteId("");
+      return;
+    }
+    if (!data.sites.some((site) => site.id === selectedSiteId)) {
+      setSelectedSiteId(data.sites[0]?.id ?? "");
+    }
+  }, [data.sites, selectedSiteId]);
+
+  useEffect(() => {
+    const nextRobotId = robotsForSite.some((robot) => robot.id === selectedRobotId)
+      ? selectedRobotId
+      : (robotsForSite[0]?.id ?? "");
+    if (nextRobotId !== selectedRobotId) setSelectedRobotId(nextRobotId);
+  }, [robotsForSite, selectedRobotId]);
+
+  useEffect(() => {
+    const nextBuildId = buildsForRobot.some((build) => build.id === selectedBuildId)
+      ? selectedBuildId
+      : (buildsForRobot[0]?.id ?? "");
+    if (nextBuildId !== selectedBuildId) setSelectedBuildId(nextBuildId);
+  }, [buildsForRobot, selectedBuildId]);
+
+  const selected = buildsForRobot.find((build) => build.id === selectedBuildId);
   const latest = data.evaluations.find((evaluation) => evaluation.buildId === selectedBuildId);
+
+  function updateSelectionUrl(siteId: string, robotId: string, buildId: string): void {
+    const params = new URLSearchParams();
+    if (siteId !== "") params.set("site", siteId);
+    if (robotId !== "") params.set("robot", robotId);
+    if (buildId !== "") params.set("build", buildId);
+    const query = params.toString();
+    router.replace(`/app/evaluate${query.length === 0 ? "" : `?${query}`}`);
+  }
+
+  function selectSite(siteId: string): void {
+    const nextRobotId = data.robots.find((robot) => robot.siteId === siteId)?.id ?? "";
+    const nextBuildId =
+      data.builds.find((build) => build.siteId === siteId && build.robotId === nextRobotId)?.id ??
+      "";
+    setSelectedSiteId(siteId);
+    setSelectedRobotId(nextRobotId);
+    setSelectedBuildId(nextBuildId);
+    updateSelectionUrl(siteId, nextRobotId, nextBuildId);
+  }
+
+  function selectRobot(robotId: string): void {
+    const nextBuildId =
+      data.builds.find((build) => build.siteId === selectedSiteId && build.robotId === robotId)
+        ?.id ?? "";
+    setSelectedRobotId(robotId);
+    setSelectedBuildId(nextBuildId);
+    updateSelectionUrl(selectedSiteId, robotId, nextBuildId);
+  }
+
+  function selectBuild(buildId: string): void {
+    setSelectedBuildId(buildId);
+    updateSelectionUrl(selectedSiteId, selectedRobotId, buildId);
+  }
+
   async function evaluate() {
-    if (selected === undefined || data.sites[0] === undefined) return;
+    if (selected === undefined || selectedSiteId === "" || selectedRobotId === "") return;
     setBusy(true);
     setError(null);
     try {
@@ -1444,8 +1517,8 @@ function EvaluateView({
       >("/evaluations", {
         method: "POST",
         body: jsonBody({
-          siteId: selected.siteId,
-          robotId: selected.robotId,
+          siteId: selectedSiteId,
+          robotId: selectedRobotId,
           buildId: selected.id,
         }),
       });
@@ -1517,28 +1590,83 @@ function EvaluateView({
         </Link>
       </div>
       <section className="real-evaluation-card">
-        <div className="real-evaluation-toolbar">
+        <div className="real-evaluation-account">
+          <div>
+            <span className="view-eyebrow">Authenticated P13 evaluation</span>
+            <strong>{data.account.email}</strong>
+          </div>
+          <p>
+            Your current account session supplies identity. Credentials are never entered into this
+            form or sent to the browser evaluation request.
+          </p>
+        </div>
+        <div className="real-evaluation-selector-grid">
           <label>
-            Exact build
+            Site
             <select
-              value={selectedBuildId}
-              onChange={(event) => {
-                setSelectedBuildId(event.target.value);
-                router.replace(`/app/evaluate?build=${encodeURIComponent(event.target.value)}`);
-              }}
+              aria-label="Evaluation site"
+              value={selectedSiteId}
+              onChange={(event) => selectSite(event.target.value)}
             >
-              {data.builds.map((build) => (
-                <option value={build.id} key={build.id}>
-                  {build.version} · {build.label}
+              {data.sites.length === 0 ? <option value="">No sites available</option> : null}
+              {data.sites.map((site) => (
+                <option value={site.id} key={site.id}>
+                  {site.name} · {site.location}
                 </option>
               ))}
             </select>
           </label>
+          <label>
+            Robot
+            <select
+              aria-label="Evaluation robot"
+              value={selectedRobotId}
+              onChange={(event) => selectRobot(event.target.value)}
+              disabled={robotsForSite.length === 0}
+            >
+              {robotsForSite.length === 0 ? (
+                <option value="">No robots for this site</option>
+              ) : null}
+              {robotsForSite.map((robot) => (
+                <option value={robot.id} key={robot.id}>
+                  {robot.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Exact build
+            <select
+              aria-label="Evaluation build"
+              value={selectedBuildId}
+              onChange={(event) => selectBuild(event.target.value)}
+              disabled={buildsForRobot.length === 0}
+            >
+              {buildsForRobot.length === 0 ? (
+                <option value="">No builds for this robot</option>
+              ) : null}
+              {buildsForRobot.map((build) => (
+                <option value={build.id} key={build.id}>
+                  {build.version} · {build.label} · {build.buildStatus}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="real-evaluation-toolbar">
+          <p className="field-help">
+            The server checks ownership, exact bindings, and build readiness before invoking the
+            configured CRE path.
+            {selected !== undefined && selected.buildStatus !== "BUILD_SUCCEEDED"
+              ? " This build is not ready for evaluation yet."
+              : ""}
+          </p>
           <button
             type="button"
             className="view-primary-action"
+            data-testid="run-p13-evaluation"
             onClick={() => void evaluate()}
-            disabled={busy}
+            disabled={busy || selected === undefined || selected.buildStatus !== "BUILD_SUCCEEDED"}
           >
             {busy ? "Evaluating…" : "Run evaluation"} <span aria-hidden="true">→</span>
           </button>
@@ -1849,22 +1977,24 @@ export function RealProductApp({ initialView }: { readonly initialView: ProductV
   const refresh = useCallback(async () => {
     const me = await apiFetch<{ account: Account }>("/auth/me");
     const sites = (await apiFetch<{ sites: readonly Site[] }>("/sites")).sites;
-    const site = sites[0];
-    const [robots, builds, evaluations, releases] = await Promise.all([
-      site
-        ? apiFetch<{ robots: readonly Robot[] }>(`/sites/${site.id}/robots`)
-        : Promise.resolve({ robots: [] as readonly Robot[] }),
-      site
-        ? apiFetch<{ builds: readonly Build[] }>(`/sites/${site.id}/builds`)
-        : Promise.resolve({ builds: [] as readonly Build[] }),
+    const siteResources = await Promise.all(
+      sites.map(async (site) => {
+        const [robots, builds] = await Promise.all([
+          apiFetch<{ robots: readonly Robot[] }>(`/sites/${site.id}/robots`),
+          apiFetch<{ builds: readonly Build[] }>(`/sites/${site.id}/builds`),
+        ]);
+        return { robots: robots.robots, builds: builds.builds };
+      }),
+    );
+    const [evaluations, releases] = await Promise.all([
       apiFetch<{ evaluations: readonly Evaluation[] }>("/evaluations"),
       apiFetch<{ releases: readonly ReleaseAttempt[] }>("/releases"),
     ]);
     setData({
       account: me.account,
       sites,
-      robots: robots.robots,
-      builds: builds.builds,
+      robots: siteResources.flatMap((resource) => resource.robots),
+      builds: siteResources.flatMap((resource) => resource.builds),
       evaluations: evaluations.evaluations,
       releases: releases.releases,
     });
