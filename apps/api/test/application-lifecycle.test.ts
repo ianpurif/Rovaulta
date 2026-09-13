@@ -221,7 +221,8 @@ describe("account-scoped product lifecycle", () => {
     expect(registration.statusCode).toBe(201);
     const registeredSession = cookie(registration);
     expect(registration.headers["set-cookie"]).toContain("HttpOnly");
-    expect(registration.headers["set-cookie"]).toContain("SameSite=Lax");
+    expect(registration.headers["set-cookie"]).toContain("SameSite=None");
+    expect(registration.headers["set-cookie"]).toContain("Secure");
     expect(registration.headers["set-cookie"]).toContain("Max-Age=2592000");
     expect(registration.headers["cache-control"]).toBe("no-store");
 

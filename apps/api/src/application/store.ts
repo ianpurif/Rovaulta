@@ -54,10 +54,7 @@ import {
   SCENARIO_GENERATOR_VERSION,
   WAREHOUSE_EVALUATOR_VERSION,
 } from "@rovaulta/simulation-core";
-import type {
-  BuildRunnerResult,
-  SourceBuildRuntime,
-} from "../build-integrity/index.js";
+import type { BuildRunnerResult, SourceBuildRuntime } from "../build-integrity/index.js";
 import type {
   ConfidentialEvaluationInput,
   ConfidentialEvaluationReport,
@@ -182,11 +179,7 @@ export interface PublicEvaluationPending {
 export interface PublicReleaseAttempt {
   readonly id: string;
   readonly evaluationId: string;
-  readonly status:
-    | "PREPARED"
-    | "LEDGER_APPROVAL_REQUIRED"
-    | "AUTHORIZED"
-    | "BLOCKED";
+  readonly status: "PREPARED" | "LEDGER_APPROVAL_REQUIRED" | "AUTHORIZED" | "BLOCKED";
   readonly code: string | null;
   readonly message: string;
   readonly createdAt: string;
@@ -322,30 +315,20 @@ function bytesToHex(bytes: Uint8Array): string {
   return output;
 }
 
-async function hashStoredArtifact(
-  path: string,
-): Promise<ReturnType<typeof parseSha256Digest>> {
+async function hashStoredArtifact(path: string): Promise<ReturnType<typeof parseSha256Digest>> {
   const hash = createHash("sha256");
   let size = 0;
   try {
     for await (const chunk of createReadStream(path)) {
       const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
       size += bytes.length;
-      if (size > MAX_STORED_ARTIFACT_BYTES)
-        throw new Error("artifact is too large");
+      if (size > MAX_STORED_ARTIFACT_BYTES) throw new Error("artifact is too large");
       hash.update(bytes);
     }
   } catch {
-    throw new ApplicationError(
-      "BUILD_FAILED",
-      "The produced artifact could not be verified",
-    );
+    throw new ApplicationError("BUILD_FAILED", "The produced artifact could not be verified");
   }
-  if (size === 0)
-    throw new ApplicationError(
-      "BUILD_FAILED",
-      "The produced artifact is empty",
-    );
+  if (size === 0) throw new ApplicationError("BUILD_FAILED", "The produced artifact is empty");
   return parseSha256Digest(`sha256:${hash.digest("hex")}`);
 }
 
@@ -358,20 +341,13 @@ function hashToken(token: string): string {
 }
 
 function creCallbackDigest(callback: CreEvaluationResultCallback): string {
-  return createHash("sha256")
-    .update(canonicalSerialize(callback), "utf8")
-    .digest("hex");
+  return createHash("sha256").update(canonicalSerialize(callback), "utf8").digest("hex");
 }
 
 function normalizeEmail(input: unknown): string {
-  if (typeof input !== "string")
-    throw new ApplicationError("INVALID_INPUT", "Email is required");
+  if (typeof input !== "string") throw new ApplicationError("INVALID_INPUT", "Email is required");
   const email = input.trim().toLowerCase();
-  if (
-    email.length < 3 ||
-    email.length > 254 ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  ) {
+  if (email.length < 3 || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new ApplicationError("INVALID_INPUT", "Enter a valid email address");
   }
   return email;
@@ -400,11 +376,7 @@ function hashPassword(password: string): string {
 
 function verifyPassword(password: string, encoded: string): boolean {
   const [algorithm, saltEncoded, digestEncoded] = encoded.split("$");
-  if (
-    algorithm !== "scrypt" ||
-    saltEncoded === undefined ||
-    digestEncoded === undefined
-  )
+  if (algorithm !== "scrypt" || saltEncoded === undefined || digestEncoded === undefined)
     return false;
   try {
     const salt = Buffer.from(saltEncoded, "base64url");
@@ -415,9 +387,7 @@ function verifyPassword(password: string, encoded: string): boolean {
       p: 1,
       maxmem: 64 * 1024 * 1024,
     });
-    return (
-      expected.length === actual.length && timingSafeEqual(expected, actual)
-    );
+    return expected.length === actual.length && timingSafeEqual(expected, actual);
   } catch {
     return false;
   }
@@ -425,20 +395,12 @@ function verifyPassword(password: string, encoded: string): boolean {
 
 function canonicalPolicyKey(input: Uint8Array | undefined): Uint8Array {
   if (input === undefined || input.length !== 32) {
-    throw new ApplicationError(
-      "POLICY_UNAVAILABLE",
-      "A 32-byte policy encryption key is required",
-    );
+    throw new ApplicationError("POLICY_UNAVAILABLE", "A 32-byte policy encryption key is required");
   }
   return Uint8Array.from(input);
 }
 
-function parseInteger(
-  input: unknown,
-  label: string,
-  minimum: number,
-  maximum: number,
-): number {
+function parseInteger(input: unknown, label: string, minimum: number, maximum: number): number {
   if (
     typeof input !== "number" ||
     !Number.isSafeInteger(input) ||
@@ -453,12 +415,7 @@ function parseInteger(
   return input;
 }
 
-function parseText(
-  input: unknown,
-  label: string,
-  minimum = 1,
-  maximum = 120,
-): string {
+function parseText(input: unknown, label: string, minimum = 1, maximum = 120): string {
   if (typeof input !== "string")
     throw new ApplicationError("INVALID_INPUT", `${label} is required`);
   const value = input.trim();
@@ -475,10 +432,7 @@ function parsePoint(input: unknown, label: string) {
   try {
     return parsePointMm(input, label);
   } catch {
-    throw new ApplicationError(
-      "INVALID_INPUT",
-      `${label} is not a valid point`,
-    );
+    throw new ApplicationError("INVALID_INPUT", `${label} is not a valid point`);
   }
 }
 
@@ -495,15 +449,8 @@ function parsePolicy(input: unknown): PolicyInput {
     "zoneSpeedLimitMmPerSecond",
     "payloadThresholdGrams",
   ] as const;
-  if (
-    Object.keys(record).some(
-      (key) => !keys.includes(key as (typeof keys)[number]),
-    )
-  ) {
-    throw new ApplicationError(
-      "INVALID_INPUT",
-      "Safety policy contains an unsupported field",
-    );
+  if (Object.keys(record).some((key) => !keys.includes(key as (typeof keys)[number]))) {
+    throw new ApplicationError("INVALID_INPUT", "Safety policy contains an unsupported field");
   }
   const zone = record.restrictedZone;
   if (zone === null || typeof zone !== "object" || Array.isArray(zone)) {
@@ -511,57 +458,19 @@ function parsePolicy(input: unknown): PolicyInput {
   }
   const zoneRecord = zone as Record<string, unknown>;
   const zoneKeys = ["minXmm", "minYmm", "maxXmm", "maxYmm"] as const;
-  if (
-    Object.keys(zoneRecord).some(
-      (key) => !zoneKeys.includes(key as (typeof zoneKeys)[number]),
-    )
-  ) {
-    throw new ApplicationError(
-      "INVALID_INPUT",
-      "Restricted zone contains an unsupported field",
-    );
+  if (Object.keys(zoneRecord).some((key) => !zoneKeys.includes(key as (typeof zoneKeys)[number]))) {
+    throw new ApplicationError("INVALID_INPUT", "Restricted zone contains an unsupported field");
   }
-  const width = parseInteger(
-    record.warehouseWidthMm,
-    "Warehouse width",
-    1_000,
-    10_000_000,
-  );
-  const height = parseInteger(
-    record.warehouseHeightMm,
-    "Warehouse height",
-    1_000,
-    10_000_000,
-  );
+  const width = parseInteger(record.warehouseWidthMm, "Warehouse width", 1_000, 10_000_000);
+  const height = parseInteger(record.warehouseHeightMm, "Warehouse height", 1_000, 10_000_000);
   const parsedZone = {
-    minXmm: parseInteger(
-      zoneRecord.minXmm,
-      "Restricted zone minXmm",
-      0,
-      width - 1,
-    ),
-    minYmm: parseInteger(
-      zoneRecord.minYmm,
-      "Restricted zone minYmm",
-      0,
-      height - 1,
-    ),
+    minXmm: parseInteger(zoneRecord.minXmm, "Restricted zone minXmm", 0, width - 1),
+    minYmm: parseInteger(zoneRecord.minYmm, "Restricted zone minYmm", 0, height - 1),
     maxXmm: parseInteger(zoneRecord.maxXmm, "Restricted zone maxXmm", 1, width),
-    maxYmm: parseInteger(
-      zoneRecord.maxYmm,
-      "Restricted zone maxYmm",
-      1,
-      height,
-    ),
+    maxYmm: parseInteger(zoneRecord.maxYmm, "Restricted zone maxYmm", 1, height),
   } as const;
-  if (
-    parsedZone.minXmm >= parsedZone.maxXmm ||
-    parsedZone.minYmm >= parsedZone.maxYmm
-  ) {
-    throw new ApplicationError(
-      "INVALID_INPUT",
-      "Restricted zone must have positive dimensions",
-    );
+  if (parsedZone.minXmm >= parsedZone.maxXmm || parsedZone.minYmm >= parsedZone.maxYmm) {
+    throw new ApplicationError("INVALID_INPUT", "Restricted zone must have positive dimensions");
   }
   return Object.freeze({
     warehouseWidthMm: width,
@@ -653,10 +562,7 @@ function buildEnvelope(
     });
   } catch (error) {
     if (error instanceof ApplicationError) throw error;
-    throw new ApplicationError(
-      "INVALID_INPUT",
-      "Safety policy could not be validated",
-    );
+    throw new ApplicationError("INVALID_INPUT", "Safety policy could not be validated");
   }
 }
 
@@ -667,10 +573,7 @@ function encryptPolicy(value: DecryptedPolicy, key: Uint8Array): string {
     envelope: value.envelope,
     blind: Buffer.from(value.blind).toString("base64url"),
   });
-  const ciphertext = Buffer.concat([
-    cipher.update(payload, "utf8"),
-    cipher.final(),
-  ]);
+  const ciphertext = Buffer.concat([cipher.update(payload, "utf8"), cipher.final()]);
   return JSON.stringify({
     version: POLICY_CIPHERTEXT_VERSION,
     iv: iv.toString("base64url"),
@@ -683,11 +586,7 @@ function decryptPolicy(encoded: string, key: Uint8Array): DecryptedPolicy {
   try {
     const stored = JSON.parse(encoded) as PersistedPolicy;
     if (stored.version !== POLICY_CIPHERTEXT_VERSION) throw new Error();
-    const decipher = createDecipheriv(
-      "aes-256-gcm",
-      key,
-      Buffer.from(stored.iv, "base64url"),
-    );
+    const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(stored.iv, "base64url"));
     decipher.setAuthTag(Buffer.from(stored.tag, "base64url"));
     const plaintext = Buffer.concat([
       decipher.update(Buffer.from(stored.ciphertext, "base64url")),
@@ -702,10 +601,7 @@ function decryptPolicy(encoded: string, key: Uint8Array): DecryptedPolicy {
     if (blind.length !== 32) throw new Error();
     return Object.freeze({ envelope, blind });
   } catch {
-    throw new ApplicationError(
-      "POLICY_UNAVAILABLE",
-      "Stored safety policy could not be opened",
-    );
+    throw new ApplicationError("POLICY_UNAVAILABLE", "Stored safety policy could not be opened");
   }
 }
 
@@ -765,8 +661,7 @@ function buildTraceSuite(
 }
 
 const SOURCE_COMMIT_PATTERN = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
-const SOURCE_BUILD_COMMAND_PATTERN =
-  /^(?:bun|node|npm)(?:\s+[A-Za-z0-9_./:@=+-]+)*$/;
+const SOURCE_BUILD_COMMAND_PATTERN = /^(?:bun|node|npm)(?:\s+[A-Za-z0-9_./:@=+-]+)*$/;
 
 function parseSourceBuildInput(input: {
   readonly sourceRepository: unknown;
@@ -780,18 +675,12 @@ function parseSourceBuildInput(input: {
   readonly runtime: SourceBuildRuntime;
 } {
   if (typeof input.sourceRepository !== "string")
-    throw new ApplicationError(
-      "INVALID_INPUT",
-      "Source repository is required",
-    );
+    throw new ApplicationError("INVALID_INPUT", "Source repository is required");
   let sourceUrl: URL;
   try {
     sourceUrl = new URL(input.sourceRepository.trim());
   } catch {
-    throw new ApplicationError(
-      "INVALID_INPUT",
-      "Source repository must be an HTTPS URL",
-    );
+    throw new ApplicationError("INVALID_INPUT", "Source repository must be an HTTPS URL");
   }
   if (
     sourceUrl.protocol !== "https:" ||
@@ -801,36 +690,22 @@ function parseSourceBuildInput(input: {
     sourceUrl.hash !== "" ||
     !["github.com", "gitlab.com"].includes(sourceUrl.hostname.toLowerCase())
   ) {
-    throw new ApplicationError(
-      "INVALID_INPUT",
-      "Source repository host is not allowed",
-    );
+    throw new ApplicationError("INVALID_INPUT", "Source repository host is not allowed");
   }
   const sourceRepository = sourceUrl.toString().replace(/\/$/, "");
-  if (
-    typeof input.sourceRevision !== "string" ||
-    !SOURCE_COMMIT_PATTERN.test(input.sourceRevision)
-  )
-    throw new ApplicationError(
-      "INVALID_INPUT",
-      "Source revision must be an exact commit SHA",
-    );
+  if (typeof input.sourceRevision !== "string" || !SOURCE_COMMIT_PATTERN.test(input.sourceRevision))
+    throw new ApplicationError("INVALID_INPUT", "Source revision must be an exact commit SHA");
   if (typeof input.buildCommand !== "string")
     throw new ApplicationError("INVALID_INPUT", "Build command is required");
   const buildCommand = input.buildCommand.trim();
   if (!SOURCE_BUILD_COMMAND_PATTERN.test(buildCommand))
-    throw new ApplicationError(
-      "INVALID_INPUT",
-      "Build command contains unsupported shell syntax",
-    );
+    throw new ApplicationError("INVALID_INPUT", "Build command contains unsupported shell syntax");
   if (input.runtime !== "bun" && input.runtime !== "node")
     throw new ApplicationError("INVALID_INPUT", "Runtime must be bun or node");
   const commandRuntime = buildCommand.split(/\s+/, 1)[0];
   if (
     (input.runtime === "bun" && commandRuntime !== "bun") ||
-    (input.runtime === "node" &&
-      commandRuntime !== "node" &&
-      commandRuntime !== "npm")
+    (input.runtime === "node" && commandRuntime !== "node" && commandRuntime !== "npm")
   ) {
     throw new ApplicationError(
       "INVALID_INPUT",
@@ -845,20 +720,11 @@ function parseSourceBuildInput(input: {
   };
 }
 
-function publicBuild(
-  row: BuildRow,
-  integrity: BuildIntegrityRow | null = null,
-): PublicBuild {
+function publicBuild(row: BuildRow, integrity: BuildIntegrityRow | null = null): PublicBuild {
   const descriptor = parseRobotBuildDescriptor(JSON.parse(row.descriptor_json));
   const route = JSON.parse(row.route_json) as PublicBuild["route"];
-  if (
-    descriptor.robotId !== row.robot_id ||
-    descriptor.robotBuildId !== row.id
-  ) {
-    throw new ApplicationError(
-      "PERSISTENCE_UNAVAILABLE",
-      "Build descriptor binding is invalid",
-    );
+  if (descriptor.robotId !== row.robot_id || descriptor.robotBuildId !== row.id) {
+    throw new ApplicationError("PERSISTENCE_UNAVAILABLE", "Build descriptor binding is invalid");
   }
   const common = {
     id: row.id,
@@ -916,9 +782,7 @@ function publicBuild(
     );
   }
   try {
-    const evidence = parseBuildIntegrityEvidence(
-      JSON.parse(integrity.integrity_json),
-    );
+    const evidence = parseBuildIntegrityEvidence(JSON.parse(integrity.integrity_json));
     if (
       evidence.buildId !== row.id ||
       evidence.sourceRepository !== integrity.source_repository ||
@@ -962,9 +826,7 @@ function publicEvaluation(row: EvaluationRow): PublicEvaluation {
   return Object.freeze(JSON.parse(row.public_json) as PublicEvaluation);
 }
 
-function publicPendingEvaluation(
-  row: PendingEvaluationRow,
-): PublicEvaluationPending {
+function publicPendingEvaluation(row: PendingEvaluationRow): PublicEvaluationPending {
   return Object.freeze({
     status: "PENDING",
     evaluationId: row.evaluation_id,
@@ -993,8 +855,7 @@ export class ApplicationStore {
     readonly now?: () => string;
   }) {
     try {
-      if (options.dbPath !== ":memory:")
-        mkdirSync(dirname(options.dbPath), { recursive: true });
+      if (options.dbPath !== ":memory:") mkdirSync(dirname(options.dbPath), { recursive: true });
       this.#database = new Database(options.dbPath, {
         create: true,
         strict: true,
@@ -1106,23 +967,16 @@ export class ApplicationStore {
       `);
       this.#policyKey = canonicalPolicyKey(options.policyKey);
       this.#artifactDirectory = resolve(
-        options.artifactDirectory ??
-          resolve(process.cwd(), ".data/rovaulta-build-artifacts"),
+        options.artifactDirectory ?? resolve(process.cwd(), ".data/rovaulta-build-artifacts"),
       );
       this.#now = options.now ?? nowSeconds;
     } catch (error) {
       if (error instanceof ApplicationError) throw error;
-      throw new ApplicationError(
-        "PERSISTENCE_UNAVAILABLE",
-        "Application store is unavailable",
-      );
+      throw new ApplicationError("PERSISTENCE_UNAVAILABLE", "Application store is unavailable");
     }
   }
 
-  registerAccount(input: {
-    readonly email: unknown;
-    readonly password: unknown;
-  }): {
+  registerAccount(input: { readonly email: unknown; readonly password: unknown }): {
     account: PublicAccount;
     sessionToken: string;
     expiresAt: string;
@@ -1141,16 +995,11 @@ export class ApplicationStore {
           "An account with that email already exists",
         );
       this.#database
-        .query(
-          "INSERT INTO accounts (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
-        )
+        .query("INSERT INTO accounts (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)")
         .run(accountId, email, hashPassword(password), createdAt);
     } catch (error) {
       if (error instanceof ApplicationError) throw error;
-      throw new ApplicationError(
-        "DUPLICATE_ACCOUNT",
-        "An account with that email already exists",
-      );
+      throw new ApplicationError("DUPLICATE_ACCOUNT", "An account with that email already exists");
     }
     const session = this.createSession(accountId);
     return { account: { id: accountId, email, createdAt }, ...session };
@@ -1166,15 +1015,8 @@ export class ApplicationStore {
     const row = this.#database
       .query<AccountRow, [string]>("SELECT * FROM accounts WHERE email = ?")
       .get(email);
-    if (
-      row === null ||
-      row === undefined ||
-      !verifyPassword(password, row.password_hash)
-    ) {
-      throw new ApplicationError(
-        "INVALID_CREDENTIALS",
-        "Email or password is incorrect",
-      );
+    if (row === null || row === undefined || !verifyPassword(password, row.password_hash)) {
+      throw new ApplicationError("INVALID_CREDENTIALS", "Email or password is incorrect");
     }
     const session = this.createSession(row.id);
     return { account: publicAccount(row), ...session };
@@ -1186,9 +1028,7 @@ export class ApplicationStore {
   } {
     assertAccountId(accountId);
     const token = randomBytes(32).toString("base64url");
-    const expiresAt = (
-      BigInt(this.#now()) + BigInt(SESSION_TTL_SECONDS)
-    ).toString();
+    const expiresAt = (BigInt(this.#now()) + BigInt(SESSION_TTL_SECONDS)).toString();
     this.#database
       .query(
         "INSERT INTO sessions (token_hash, account_id, expires_at, created_at) VALUES (?, ?, ?, ?)",
@@ -1200,31 +1040,24 @@ export class ApplicationStore {
   accountForSession(token: string | null | undefined): PublicAccount | null {
     if (token === null || token === undefined || token.length < 16) return null;
     const row = this.#database
-      .query<
-        SessionRow,
-        [string]
-      >("SELECT account_id, expires_at FROM sessions WHERE token_hash = ?")
+      .query<SessionRow, [string]>(
+        "SELECT account_id, expires_at FROM sessions WHERE token_hash = ?",
+      )
       .get(hashToken(token));
     if (row === null || row === undefined) return null;
     if (BigInt(row.expires_at) <= BigInt(this.#now())) {
-      this.#database
-        .query("DELETE FROM sessions WHERE token_hash = ?")
-        .run(hashToken(token));
+      this.#database.query("DELETE FROM sessions WHERE token_hash = ?").run(hashToken(token));
       return null;
     }
     const account = this.#database
       .query<AccountRow, [string]>("SELECT * FROM accounts WHERE id = ?")
       .get(row.account_id);
-    return account === null || account === undefined
-      ? null
-      : publicAccount(account);
+    return account === null || account === undefined ? null : publicAccount(account);
   }
 
   revokeSession(token: string | null | undefined): void {
     if (token === null || token === undefined) return;
-    this.#database
-      .query("DELETE FROM sessions WHERE token_hash = ?")
-      .run(hashToken(token));
+    this.#database.query("DELETE FROM sessions WHERE token_hash = ?").run(hashToken(token));
   }
 
   createSite(
@@ -1281,10 +1114,9 @@ export class ApplicationStore {
     assertAccountId(accountId);
     return Object.freeze(
       this.#database
-        .query<
-          SiteRow,
-          [string]
-        >("SELECT * FROM sites WHERE account_id = ? ORDER BY created_at, id")
+        .query<SiteRow, [string]>(
+          "SELECT * FROM sites WHERE account_id = ? ORDER BY created_at, id",
+        )
         .all(accountId)
         .map(publicSite),
     );
@@ -1330,11 +1162,7 @@ export class ApplicationStore {
     });
   }
 
-  createRobot(
-    accountId: string,
-    siteId: string,
-    input: { readonly name: unknown },
-  ): PublicRobot {
+  createRobot(accountId: string, siteId: string, input: { readonly name: unknown }): PublicRobot {
     const site = this.#siteRow(accountId, siteId);
     const row: RobotRow = {
       id: id("robot"),
@@ -1355,10 +1183,9 @@ export class ApplicationStore {
     this.#siteRow(accountId, siteId);
     return Object.freeze(
       this.#database
-        .query<
-          RobotRow,
-          [string, string]
-        >("SELECT * FROM robots WHERE account_id = ? AND site_id = ? ORDER BY created_at, id")
+        .query<RobotRow, [string, string]>(
+          "SELECT * FROM robots WHERE account_id = ? AND site_id = ? ORDER BY created_at, id",
+        )
         .all(accountId, siteId)
         .map(publicRobot),
     );
@@ -1375,14 +1202,14 @@ export class ApplicationStore {
       readonly route: unknown;
     },
   ): PublicBuild {
-    const { site, robot, version, label, start, end, speed } =
-      this.#parseBuildCreationInput(accountId, siteId, input);
+    const { site, robot, version, label, start, end, speed } = this.#parseBuildCreationInput(
+      accountId,
+      siteId,
+      input,
+    );
     let artifactDigest: RobotBuildDescriptor["artifactDigest"];
     try {
-      artifactDigest = parseSha256Digest(
-        input.artifactDigest,
-        "artifactDigest",
-      );
+      artifactDigest = parseSha256Digest(input.artifactDigest, "artifactDigest");
     } catch {
       throw new ApplicationError(
         "INVALID_INPUT",
@@ -1396,14 +1223,7 @@ export class ApplicationStore {
       robotBuildId: buildId,
       artifactDigest,
     });
-    const traces = buildTraceSuite(
-      robot.id,
-      buildId,
-      descriptor,
-      start,
-      end,
-      speed,
-    );
+    const traces = buildTraceSuite(robot.id, buildId, descriptor, start, end, speed);
     const createdAt = this.#now();
     const row: BuildRow = {
       id: buildId,
@@ -1450,27 +1270,21 @@ export class ApplicationStore {
       readonly route: unknown;
     },
   ): PublicBuild {
-    const { site, robot, version, label, start, end, speed } =
-      this.#parseBuildCreationInput(accountId, siteId, input);
+    const { site, robot, version, label, start, end, speed } = this.#parseBuildCreationInput(
+      accountId,
+      siteId,
+      input,
+    );
     const source = parseSourceBuildInput(input);
     const buildId = id("robot-build");
-    const placeholderArtifactDigest = parseSha256Digest(
-      `sha256:${"0".repeat(64)}`,
-    );
+    const placeholderArtifactDigest = parseSha256Digest(`sha256:${"0".repeat(64)}`);
     const descriptor = parseRobotBuildDescriptor({
       schemaVersion: ROBOT_BUILD_SCHEMA_VERSION,
       robotId: robot.id,
       robotBuildId: buildId,
       artifactDigest: placeholderArtifactDigest,
     });
-    const traces = buildTraceSuite(
-      robot.id,
-      buildId,
-      descriptor,
-      start,
-      end,
-      speed,
-    );
+    const traces = buildTraceSuite(robot.id, buildId, descriptor, start, end, speed);
     const createdAt = this.#now();
     const row: BuildRow = {
       id: buildId,
@@ -1504,10 +1318,9 @@ export class ApplicationStore {
     try {
       this.#database.run("BEGIN IMMEDIATE");
       const active = this.#database
-        .query<
-          { readonly count: number },
-          [string, string]
-        >("SELECT COUNT(*) AS count FROM build_integrity WHERE account_id = ? AND status = ?")
+        .query<{ readonly count: number }, [string, string]>(
+          "SELECT COUNT(*) AS count FROM build_integrity WHERE account_id = ? AND status = ?",
+        )
         .get(accountId, "BUILDING");
       if ((active?.count ?? 0) >= MAX_BUILDING_SOURCE_BUILDS_PER_ACCOUNT) {
         throw new ApplicationError(
@@ -1560,10 +1373,7 @@ export class ApplicationStore {
         // Preserve the original failure without exposing SQLite details.
       }
       if (error instanceof ApplicationError) throw error;
-      throw new ApplicationError(
-        "PERSISTENCE_UNAVAILABLE",
-        "Source build could not be stored",
-      );
+      throw new ApplicationError("PERSISTENCE_UNAVAILABLE", "Source build could not be stored");
     }
     return publicBuild(row, integrity);
   }
@@ -1583,22 +1393,15 @@ export class ApplicationStore {
       currentIntegrity.robot_id,
       buildId,
     );
-    if (currentIntegrity.status === "BUILD_SUCCEEDED")
-      return publicBuild(build, currentIntegrity);
+    if (currentIntegrity.status === "BUILD_SUCCEEDED") return publicBuild(build, currentIntegrity);
     if (currentIntegrity.status !== "BUILDING")
-      throw new ApplicationError(
-        "CONFLICT",
-        "Source build is no longer running",
-      );
+      throw new ApplicationError("CONFLICT", "Source build is no longer running");
 
     let evidence: BuildIntegrityEvidence;
     try {
       evidence = parseBuildIntegrityEvidence(result.evidence);
     } catch {
-      throw new ApplicationError(
-        "BUILD_FAILED",
-        "Source build evidence is invalid",
-      );
+      throw new ApplicationError("BUILD_FAILED", "Source build evidence is invalid");
     }
     if (
       evidence.buildId !== build.id ||
@@ -1625,17 +1428,11 @@ export class ApplicationStore {
       !artifactPath.startsWith(`${this.#artifactDirectory}${sep}`) ||
       artifactPath !== expectedArtifactPath
     ) {
-      throw new ApplicationError(
-        "BUILD_FAILED",
-        "Source build artifact path is invalid",
-      );
+      throw new ApplicationError("BUILD_FAILED", "Source build artifact path is invalid");
     }
     const storedArtifactDigest = await hashStoredArtifact(artifactPath);
     if (storedArtifactDigest !== evidence.artifactDigest) {
-      throw new ApplicationError(
-        "BUILD_FAILED",
-        "Stored artifact digest does not match evidence",
-      );
+      throw new ApplicationError("BUILD_FAILED", "Stored artifact digest does not match evidence");
     }
 
     const route = JSON.parse(build.route_json) as PublicBuild["route"];
@@ -1687,26 +1484,15 @@ export class ApplicationStore {
           "BUILDING",
         );
       if (integrityUpdate.changes !== 1) {
-        throw new ApplicationError(
-          "CONFLICT",
-          "Source build is no longer running",
-        );
+        throw new ApplicationError("CONFLICT", "Source build is no longer running");
       }
       const buildUpdate = this.#database
         .query(
           "UPDATE builds SET descriptor_json = ?, trace_json = ? WHERE id = ? AND account_id = ?",
         )
-        .run(
-          updatedBuild.descriptor_json,
-          updatedBuild.trace_json,
-          build.id,
-          accountId,
-        );
+        .run(updatedBuild.descriptor_json, updatedBuild.trace_json, build.id, accountId);
       if (buildUpdate.changes !== 1) {
-        throw new ApplicationError(
-          "PERSISTENCE_UNAVAILABLE",
-          "Source build could not be promoted",
-        );
+        throw new ApplicationError("PERSISTENCE_UNAVAILABLE", "Source build could not be promoted");
       }
       this.#database.run("COMMIT");
     } catch (error) {
@@ -1740,10 +1526,8 @@ export class ApplicationStore {
       currentIntegrity.robot_id,
       buildId,
     );
-    if (currentIntegrity.status === "BUILD_FAILED")
-      return publicBuild(build, currentIntegrity);
-    if (currentIntegrity.status === "BUILD_SUCCEEDED")
-      return publicBuild(build, currentIntegrity);
+    if (currentIntegrity.status === "BUILD_FAILED") return publicBuild(build, currentIntegrity);
+    if (currentIntegrity.status === "BUILD_SUCCEEDED") return publicBuild(build, currentIntegrity);
     const updatedIntegrity: BuildIntegrityRow = {
       ...currentIntegrity,
       status: "BUILD_FAILED",
@@ -1775,9 +1559,7 @@ export class ApplicationStore {
           "SELECT * FROM builds WHERE account_id = ? AND site_id = ? ORDER BY created_at, id",
         )
         .all(accountId, siteId)
-        .map((row) =>
-          publicBuild(row, this.#buildIntegrityRow(accountId, row.id)),
-        ),
+        .map((row) => publicBuild(row, this.#buildIntegrityRow(accountId, row.id))),
     );
   }
 
@@ -1789,40 +1571,26 @@ export class ApplicationStore {
           "SELECT * FROM builds WHERE account_id = ? ORDER BY created_at, id",
         )
         .all(accountId)
-        .map((row) =>
-          publicBuild(row, this.#buildIntegrityRow(accountId, row.id)),
-        ),
+        .map((row) => publicBuild(row, this.#buildIntegrityRow(accountId, row.id))),
     );
   }
 
-  #findEvaluationByEvaluationId(
-    accountId: string,
-    evaluationId: string,
-  ): EvaluationRow | null {
+  #findEvaluationByEvaluationId(accountId: string, evaluationId: string): EvaluationRow | null {
     const rows = this.#database
-      .query<
-        EvaluationRow,
-        [string]
-      >("SELECT * FROM evaluations WHERE account_id = ?")
+      .query<EvaluationRow, [string]>("SELECT * FROM evaluations WHERE account_id = ?")
       .all(accountId);
     return (
       rows.find(
-        (row) =>
-          (JSON.parse(row.public_json) as PublicEvaluation).evaluationId ===
-          evaluationId,
+        (row) => (JSON.parse(row.public_json) as PublicEvaluation).evaluationId === evaluationId,
       ) ?? null
     );
   }
 
   #findAnyEvaluationByEvaluationId(evaluationId: string): EvaluationRow | null {
-    const rows = this.#database
-      .query<EvaluationRow, []>("SELECT * FROM evaluations")
-      .all();
+    const rows = this.#database.query<EvaluationRow, []>("SELECT * FROM evaluations").all();
     return (
       rows.find(
-        (row) =>
-          (JSON.parse(row.public_json) as PublicEvaluation).evaluationId ===
-          evaluationId,
+        (row) => (JSON.parse(row.public_json) as PublicEvaluation).evaluationId === evaluationId,
       ) ?? null
     );
   }
@@ -1837,10 +1605,9 @@ export class ApplicationStore {
     readonly requestedAt: string;
   }): void {
     const existing = this.#database
-      .query<
-        PendingEvaluationRow,
-        [string]
-      >("SELECT * FROM pending_evaluations WHERE evaluation_id = ?")
+      .query<PendingEvaluationRow, [string]>(
+        "SELECT * FROM pending_evaluations WHERE evaluation_id = ?",
+      )
       .get(input.evaluationId);
     if (existing !== null && existing !== undefined) {
       if (
@@ -1851,20 +1618,11 @@ export class ApplicationStore {
         existing.behavior_input_digest !== input.behaviorInputDigest ||
         existing.requested_at !== input.requestedAt
       ) {
-        throw new ApplicationError(
-          "CONFLICT",
-          "Evaluation request binding changed",
-        );
+        throw new ApplicationError("CONFLICT", "Evaluation request binding changed");
       }
       return;
     }
-    if (
-      this.#findEvaluationByEvaluationId(
-        input.accountId,
-        input.evaluationId,
-      ) !== null
-    )
-      return;
+    if (this.#findEvaluationByEvaluationId(input.accountId, input.evaluationId) !== null) return;
     this.#database
       .query(
         "INSERT INTO pending_evaluations (evaluation_id, account_id, site_id, robot_id, build_id, behavior_input_digest, requested_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -1887,15 +1645,12 @@ export class ApplicationStore {
       .run(evaluationId);
   }
 
-  #findCreEvaluationRejection(
-    evaluationId: string,
-  ): CreEvaluationRejectionRow | null {
+  #findCreEvaluationRejection(evaluationId: string): CreEvaluationRejectionRow | null {
     return (
       this.#database
-        .query<
-          CreEvaluationRejectionRow,
-          [string]
-        >("SELECT * FROM cre_evaluation_rejections WHERE evaluation_id = ?")
+        .query<CreEvaluationRejectionRow, [string]>(
+          "SELECT * FROM cre_evaluation_rejections WHERE evaluation_id = ?",
+        )
         .get(evaluationId) ?? null
     );
   }
@@ -1905,19 +1660,14 @@ export class ApplicationStore {
     evaluationId: string,
   ): PublicEvaluation | PublicEvaluationPending {
     assertAccountId(accountId);
-    const completed = this.#findEvaluationByEvaluationId(
-      accountId,
-      evaluationId,
-    );
+    const completed = this.#findEvaluationByEvaluationId(accountId, evaluationId);
     if (completed !== null) return publicEvaluation(completed);
     const pending = this.#database
-      .query<
-        PendingEvaluationRow,
-        [string, string]
-      >("SELECT * FROM pending_evaluations WHERE account_id = ? AND evaluation_id = ?")
+      .query<PendingEvaluationRow, [string, string]>(
+        "SELECT * FROM pending_evaluations WHERE account_id = ? AND evaluation_id = ?",
+      )
       .get(accountId, evaluationId);
-    if (pending !== null && pending !== undefined)
-      return publicPendingEvaluation(pending);
+    if (pending !== null && pending !== undefined) return publicPendingEvaluation(pending);
     throw new ApplicationError("NOT_FOUND", "Evaluation was not found");
   }
 
@@ -1932,15 +1682,12 @@ export class ApplicationStore {
       this.#database.run("BEGIN IMMEDIATE");
       const callbackDigest = creCallbackDigest(callback);
       const pending = this.#database
-        .query<
-          PendingEvaluationRow,
-          [string]
-        >("SELECT * FROM pending_evaluations WHERE evaluation_id = ?")
+        .query<PendingEvaluationRow, [string]>(
+          "SELECT * FROM pending_evaluations WHERE evaluation_id = ?",
+        )
         .get(callback.evaluationId);
       if (pending === null || pending === undefined) {
-        const existing = this.#findAnyEvaluationByEvaluationId(
-          callback.evaluationId,
-        );
+        const existing = this.#findAnyEvaluationByEvaluationId(callback.evaluationId);
         if (existing !== null) {
           this.#database.run("COMMIT");
           return {
@@ -1948,9 +1695,7 @@ export class ApplicationStore {
             evaluation: publicEvaluation(existing),
           };
         }
-        const rejection = this.#findCreEvaluationRejection(
-          callback.evaluationId,
-        );
+        const rejection = this.#findCreEvaluationRejection(callback.evaluationId);
         if (rejection !== null) {
           if (rejection.callback_digest !== callbackDigest) {
             throw new ApplicationError(
@@ -1961,19 +1706,13 @@ export class ApplicationStore {
           this.#database.run("COMMIT");
           return { status: "REJECTED", code: rejection.code };
         }
-        throw new ApplicationError(
-          "NOT_FOUND",
-          "Pending evaluation was not found",
-        );
+        throw new ApplicationError("NOT_FOUND", "Pending evaluation was not found");
       }
 
       const rejection = this.#findCreEvaluationRejection(callback.evaluationId);
       if (rejection !== null) {
         if (rejection.callback_digest !== callbackDigest) {
-          throw new ApplicationError(
-            "CONFLICT",
-            "CRE evaluation already reached a terminal state",
-          );
+          throw new ApplicationError("CONFLICT", "CRE evaluation already reached a terminal state");
         }
         this.#database.run("COMMIT");
         return { status: "REJECTED", code: rejection.code };
@@ -1996,29 +1735,16 @@ export class ApplicationStore {
         return { status: "REJECTED", code: callback.response.code };
       }
 
-      if (
-        callback.response.behaviorInputDigest !== pending.behavior_input_digest
-      ) {
+      if (callback.response.behaviorInputDigest !== pending.behavior_input_digest) {
         throw new ApplicationError(
           "CONFLICT",
           "CRE result behavior binding does not match request",
         );
       }
       const site = this.#siteRow(pending.account_id, pending.site_id);
-      const robot = this.#robotRow(
-        pending.account_id,
-        site.id,
-        pending.robot_id,
-      );
-      const build = this.#buildRow(
-        pending.account_id,
-        site.id,
-        robot.id,
-        pending.build_id,
-      );
-      const descriptor = parseRobotBuildDescriptor(
-        JSON.parse(build.descriptor_json),
-      );
+      const robot = this.#robotRow(pending.account_id, site.id, pending.robot_id);
+      const build = this.#buildRow(pending.account_id, site.id, robot.id, pending.build_id);
+      const descriptor = parseRobotBuildDescriptor(JSON.parse(build.descriptor_json));
       const request = parseEvaluationRequest({
         schemaVersion: EVALUATION_REQUEST_SCHEMA_VERSION,
         evaluationId: callback.evaluationId,
@@ -2030,16 +1756,11 @@ export class ApplicationStore {
           robotBuildDigest: digestRobotBuild(descriptor),
           safetyEnvelopeId: site.safety_envelope_id,
           safetyEnvelopeCommitment: site.safety_envelope_commitment,
-          evaluatorVersion: parseEvaluatorVersionId(
-            WAREHOUSE_EVALUATOR_VERSION,
-          ),
+          evaluatorVersion: parseEvaluatorVersionId(WAREHOUSE_EVALUATOR_VERSION),
         },
         requestedAt: pending.requested_at,
       });
-      const result = assertEvaluationResultBindings(
-        callback.response.result,
-        request,
-      );
+      const result = assertEvaluationResultBindings(callback.response.result, request);
       const publicResult: PublicEvaluation = Object.freeze({
         id: id("evaluation-record"),
         siteId: site.id,
@@ -2090,8 +1811,7 @@ export class ApplicationStore {
       } catch {
         // Preserve the original failure without exposing SQLite details.
       }
-      if (error instanceof ApplicationError || error instanceof ProtocolError)
-        throw error;
+      if (error instanceof ApplicationError || error instanceof ProtocolError) throw error;
       throw new ApplicationError(
         "PERSISTENCE_UNAVAILABLE",
         "CRE evaluation result could not be stored",
@@ -2118,30 +1838,16 @@ export class ApplicationStore {
     const build = this.#buildRow(accountId, site.id, robot.id, input.buildId);
     const integrity = this.#buildIntegrityRow(accountId, build.id);
     if (integrity?.status === "BUILDING") {
-      throw new ApplicationError(
-        "BUILD_NOT_READY",
-        "Source build is still running",
-      );
+      throw new ApplicationError("BUILD_NOT_READY", "Source build is still running");
     }
     if (integrity?.status === "BUILD_FAILED") {
-      throw new ApplicationError(
-        "BUILD_FAILED",
-        "Source build did not complete successfully",
-      );
+      throw new ApplicationError("BUILD_FAILED", "Source build did not complete successfully");
     }
     if (integrity !== null) publicBuild(build, integrity);
     const policy = decryptPolicy(site.policy_ciphertext, this.#policyKey);
-    const descriptor = parseRobotBuildDescriptor(
-      JSON.parse(build.descriptor_json),
-    );
-    if (
-      descriptor.robotId !== robot.id ||
-      descriptor.robotBuildId !== build.id
-    ) {
-      throw new ApplicationError(
-        "PERSISTENCE_UNAVAILABLE",
-        "Build descriptor binding is invalid",
-      );
+    const descriptor = parseRobotBuildDescriptor(JSON.parse(build.descriptor_json));
+    if (descriptor.robotId !== robot.id || descriptor.robotBuildId !== build.id) {
+      throw new ApplicationError("PERSISTENCE_UNAVAILABLE", "Build descriptor binding is invalid");
     }
     const traces = parseRobotBehaviorTraceSuite(JSON.parse(build.trace_json));
     const request = parseEvaluationRequest({
@@ -2189,17 +1895,13 @@ export class ApplicationStore {
         evaluatedAt: input.evaluatedAt,
       });
     } catch (error) {
-      const existing = this.#findEvaluationByEvaluationId(
-        accountId,
-        input.evaluationId,
-      );
+      const existing = this.#findEvaluationByEvaluationId(accountId, input.evaluationId);
       if (existing !== null) return publicEvaluation(existing);
       if (
         !(
           error !== null &&
           typeof error === "object" &&
-          (error as { readonly code?: unknown }).code ===
-            "CRE_EVALUATION_PENDING"
+          (error as { readonly code?: unknown }).code === "CRE_EVALUATION_PENDING"
         )
       ) {
         this.#deletePendingEvaluation(input.evaluationId);
@@ -2208,9 +1910,7 @@ export class ApplicationStore {
     }
     const boundResult = assertEvaluationResultBindings(report.result, request);
     const reasons = Object.freeze(
-      Array.from(
-        new Set((report.violations ?? []).map((violation) => violation.type)),
-      ),
+      Array.from(new Set((report.violations ?? []).map((violation) => violation.type))),
     );
     const result: PublicEvaluation = Object.freeze({
       id: id("evaluation-record"),
@@ -2229,12 +1929,8 @@ export class ApplicationStore {
       violationCount: report.violationCount ?? null,
       reasons,
       evaluatedAt: boundResult.evaluatedAt,
-      ...(report.executionMode === undefined
-        ? {}
-        : { executionMode: report.executionMode }),
-      ...(report.creCliVersion === undefined
-        ? {}
-        : { creCliVersion: report.creCliVersion }),
+      ...(report.executionMode === undefined ? {} : { executionMode: report.executionMode }),
+      ...(report.creCliVersion === undefined ? {} : { creCliVersion: report.creCliVersion }),
     });
     const row: EvaluationRow = {
       id: result.id,
@@ -2266,10 +1962,9 @@ export class ApplicationStore {
     assertAccountId(accountId);
     return Object.freeze(
       this.#database
-        .query<
-          EvaluationRow,
-          [string]
-        >("SELECT * FROM evaluations WHERE account_id = ? ORDER BY created_at DESC, id DESC")
+        .query<EvaluationRow, [string]>(
+          "SELECT * FROM evaluations WHERE account_id = ? ORDER BY created_at DESC, id DESC",
+        )
         .all(accountId)
         .map(publicEvaluation),
     );
@@ -2278,16 +1973,13 @@ export class ApplicationStore {
   getEvaluation(accountId: string, evaluationId: string): PublicEvaluation {
     assertAccountId(accountId);
     const byRecordId = this.#database
-      .query<
-        EvaluationRow,
-        [string, string]
-      >("SELECT * FROM evaluations WHERE account_id = ? AND id = ?")
+      .query<EvaluationRow, [string, string]>(
+        "SELECT * FROM evaluations WHERE account_id = ? AND id = ?",
+      )
       .get(accountId, evaluationId);
-    if (byRecordId !== null && byRecordId !== undefined)
-      return publicEvaluation(byRecordId);
+    if (byRecordId !== null && byRecordId !== undefined) return publicEvaluation(byRecordId);
     const match = this.#findEvaluationByEvaluationId(accountId, evaluationId);
-    if (match === null)
-      throw new ApplicationError("NOT_FOUND", "Evaluation was not found");
+    if (match === null) throw new ApplicationError("NOT_FOUND", "Evaluation was not found");
     return publicEvaluation(match);
   }
 
@@ -2304,10 +1996,7 @@ export class ApplicationStore {
     try {
       clearance = parseClearanceRecord(clearanceInput);
     } catch {
-      throw new ApplicationError(
-        "CONFLICT",
-        "The public clearance record is malformed",
-      );
+      throw new ApplicationError("CONFLICT", "The public clearance record is malformed");
     }
     const matches =
       clearance.evaluationId === evaluation.evaluationId &&
@@ -2316,15 +2005,11 @@ export class ApplicationStore {
       clearance.inputs.robotBuildId === evaluation.robotBuildId &&
       clearance.inputs.robotBuildDigest === evaluation.robotBuildDigest &&
       clearance.inputs.safetyEnvelopeId === evaluation.safetyEnvelopeId &&
-      clearance.inputs.safetyEnvelopeCommitment ===
-        evaluation.safetyEnvelopeCommitment &&
+      clearance.inputs.safetyEnvelopeCommitment === evaluation.safetyEnvelopeCommitment &&
       clearance.inputs.evaluatorVersion === evaluation.evaluatorVersion &&
       clearance.evaluationInputsDigest === evaluation.evaluationInputsDigest;
     if (!matches) {
-      throw new ApplicationError(
-        "CONFLICT",
-        "The clearance does not match the account evaluation",
-      );
+      throw new ApplicationError("CONFLICT", "The clearance does not match the account evaluation");
     }
     return Object.freeze({ evaluation, clearance });
   }
@@ -2371,19 +2056,14 @@ export class ApplicationStore {
     assertAccountId(accountId);
     return Object.freeze(
       this.#database
-        .query<
-          ReleaseAttemptRow & { evaluation_public_json: string },
-          [string]
-        >(
+        .query<ReleaseAttemptRow & { evaluation_public_json: string }, [string]>(
           "SELECT release_attempts.*, evaluations.public_json AS evaluation_public_json FROM release_attempts JOIN evaluations ON evaluations.id = release_attempts.evaluation_id WHERE release_attempts.account_id = ? ORDER BY release_attempts.created_at DESC, release_attempts.id DESC",
         )
         .all(accountId)
         .map((row) =>
           Object.freeze({
             id: row.id,
-            evaluationId: (
-              JSON.parse(row.evaluation_public_json) as PublicEvaluation
-            ).evaluationId,
+            evaluationId: (JSON.parse(row.evaluation_public_json) as PublicEvaluation).evaluationId,
             status: row.status,
             code: row.code,
             message: row.message,
@@ -2401,12 +2081,15 @@ export class ApplicationStore {
     return SESSION_COOKIE;
   }
 
-  static sessionCookie(token: string, secure: boolean): string {
-    return `${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=None; Max-Age=${SESSION_TTL_SECONDS}${secure ? "; Secure" : ""}`;
+  static sessionCookie(token: string, _secure: boolean): string {
+    // SameSite=None is required because the API (port 4000) and web (port 3000) are cross-origin.
+    // SameSite=None mandates the Secure attribute; Chrome treats localhost as a secure context,
+    // so this works in both development and production.
+    return `${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=${SESSION_TTL_SECONDS}`;
   }
 
-  static clearSessionCookie(secure: boolean): string {
-    return `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=None; Max-Age=0${secure ? "; Secure" : ""}`;
+  static clearSessionCookie(_secure: boolean): string {
+    return `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=0`;
   }
 
   static readSessionCookie(header: string | undefined): string | null {
@@ -2448,21 +2131,12 @@ export class ApplicationStore {
     const robot = this.#robotRow(accountId, site.id, input.robotId);
     const version = parseText(input.version, "Build version", 1, 80);
     const label = parseText(input.label, "Build label", 1, 120);
-    if (
-      input.route === null ||
-      typeof input.route !== "object" ||
-      Array.isArray(input.route)
-    )
+    if (input.route === null || typeof input.route !== "object" || Array.isArray(input.route))
       throw new ApplicationError("INVALID_INPUT", "A route is required");
     const route = input.route as Record<string, unknown>;
     const start = parsePoint(route.start, "route.start");
     const end = parsePoint(route.end, "route.end");
-    const speed = parseInteger(
-      route.speedMmPerSecond,
-      "Route speed",
-      0,
-      1_000_000,
-    );
+    const speed = parseInteger(route.speedMmPerSecond, "Route speed", 0, 1_000_000);
     const policy = decryptPolicy(site.policy_ciphertext, this.#policyKey);
     const bounds = policy.envelope.warehouseBounds;
     for (const [point, labelName] of [
@@ -2487,10 +2161,7 @@ export class ApplicationStore {
   #siteRow(accountId: string, siteId: string): SiteRow {
     assertAccountId(accountId);
     const row = this.#database
-      .query<
-        SiteRow,
-        [string, string]
-      >("SELECT * FROM sites WHERE account_id = ? AND id = ?")
+      .query<SiteRow, [string, string]>("SELECT * FROM sites WHERE account_id = ? AND id = ?")
       .get(accountId, siteId);
     if (row === null || row === undefined)
       throw new ApplicationError("NOT_FOUND", "Site was not found");
@@ -2499,42 +2170,31 @@ export class ApplicationStore {
 
   #robotRow(accountId: string, siteId: string, robotId: string): RobotRow {
     const row = this.#database
-      .query<
-        RobotRow,
-        [string, string, string]
-      >("SELECT * FROM robots WHERE account_id = ? AND site_id = ? AND id = ?")
+      .query<RobotRow, [string, string, string]>(
+        "SELECT * FROM robots WHERE account_id = ? AND site_id = ? AND id = ?",
+      )
       .get(accountId, siteId, robotId);
     if (row === null || row === undefined)
       throw new ApplicationError("NOT_FOUND", "Robot was not found");
     return row;
   }
 
-  #buildRow(
-    accountId: string,
-    siteId: string,
-    robotId: string,
-    buildId: string,
-  ): BuildRow {
+  #buildRow(accountId: string, siteId: string, robotId: string, buildId: string): BuildRow {
     const row = this.#database
-      .query<
-        BuildRow,
-        [string, string, string, string]
-      >("SELECT * FROM builds WHERE account_id = ? AND site_id = ? AND robot_id = ? AND id = ?")
+      .query<BuildRow, [string, string, string, string]>(
+        "SELECT * FROM builds WHERE account_id = ? AND site_id = ? AND robot_id = ? AND id = ?",
+      )
       .get(accountId, siteId, robotId, buildId);
     if (row === null || row === undefined)
       throw new ApplicationError("NOT_FOUND", "Build was not found");
     return row;
   }
 
-  #buildIntegrityRow(
-    accountId: string,
-    buildId: string,
-  ): BuildIntegrityRow | null {
+  #buildIntegrityRow(accountId: string, buildId: string): BuildIntegrityRow | null {
     const row = this.#database
-      .query<
-        BuildIntegrityRow,
-        [string, string]
-      >("SELECT * FROM build_integrity WHERE account_id = ? AND build_id = ?")
+      .query<BuildIntegrityRow, [string, string]>(
+        "SELECT * FROM build_integrity WHERE account_id = ? AND build_id = ?",
+      )
       .get(accountId, buildId);
     return row ?? null;
   }
