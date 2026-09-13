@@ -257,6 +257,14 @@ describe("account-scoped product lifecycle", () => {
     expect(signedInMe.statusCode).toBe(200);
     expect(JSON.parse(signedInMe.body).account.email).toBe("session@example.test");
 
+    const bearerMe = await app.inject({
+      method: "GET",
+      url: "/auth/me",
+      headers: { authorization: `Bearer ${JSON.parse(signIn.body).sessionToken}` },
+    });
+    expect(bearerMe.statusCode).toBe(200);
+    expect(JSON.parse(bearerMe.body).account.email).toBe("session@example.test");
+
     const signOut = await app.inject({
       method: "POST",
       url: "/auth/sign-out",

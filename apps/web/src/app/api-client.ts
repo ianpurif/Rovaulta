@@ -97,11 +97,43 @@ export class ApiError extends Error {
 }
 
 const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "http://localhost:4000";
+const SESSION_TOKEN_KEY = "rovaulta.session.token";
+
+export function getClientSessionToken(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return (
+      window.localStorage.getItem(SESSION_TOKEN_KEY) ??
+      window.sessionStorage.getItem(SESSION_TOKEN_KEY)
+    );
+  } catch {
+    return null;
+  }
+}
+
+export function setClientSessionToken(token: string | null): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (token !== null && token.length > 0) {
+      window.localStorage.setItem(SESSION_TOKEN_KEY, token);
+      window.sessionStorage.setItem(SESSION_TOKEN_KEY, token);
+    } else {
+      window.localStorage.removeItem(SESSION_TOKEN_KEY);
+      window.sessionStorage.removeItem(SESSION_TOKEN_KEY);
+    }
+  } catch {
+    // Ignore storage restrictions
+  }
+}
 
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (init.body !== undefined && !headers.has("content-type"))
     headers.set("content-type", "application/json");
+  const token = getClientSessionToken();
+  if (token !== null && !headers.has("authorization")) {
+    headers.set("authorization", `Bearer ${token}`);
+  }
   const response = await fetch(`${API_ORIGIN}${path}`, {
     ...init,
     headers,

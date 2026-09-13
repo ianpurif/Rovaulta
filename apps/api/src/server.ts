@@ -109,24 +109,41 @@ export function buildServer(
       environment.WEB_ORIGIN,
     ].filter((origin): origin is string => typeof origin === "string" && origin.length > 0),
   );
+  function isAllowedOrigin(origin: string): boolean {
+    if (allowedOrigins.has(origin)) return true;
+    try {
+      const url = new URL(origin);
+      if (url.hostname === "localhost" || url.hostname === "127.0.0.1") return true;
+      if (
+        url.hostname.endsWith(".vercel.app") &&
+        (url.protocol === "https:" || url.protocol === "http:")
+      ) {
+        return true;
+      }
+    } catch {
+      return false;
+    }
+    return false;
+  }
   function isTrustedMutationOrigin(request: {
     readonly headers: {
       readonly origin?: string | undefined;
       readonly referer?: string | undefined;
       readonly cookie?: string | undefined;
+      readonly authorization?: string | undefined;
     };
   }): boolean {
     const origin = request.headers.origin;
-    if (origin !== undefined) return allowedOrigins.has(origin);
+    if (origin !== undefined) return isAllowedOrigin(origin);
     const referer = request.headers.referer;
     if (referer !== undefined) {
       try {
-        return allowedOrigins.has(new URL(referer).origin);
+        return isAllowedOrigin(new URL(referer).origin);
       } catch {
         return false;
       }
     }
-    return request.headers.cookie === undefined;
+    return request.headers.cookie === undefined && request.headers.authorization === undefined;
   }
   app.addHook("preHandler", async (request, reply) => {
     if (request.method !== "POST" || isTrustedMutationOrigin(request)) return;
@@ -136,19 +153,20 @@ export function buildServer(
   });
   app.addHook("onSend", async (request, reply, payload) => {
     const origin = request.headers.origin;
-    if (origin !== undefined && allowedOrigins.has(origin)) {
+    if (origin !== undefined && isAllowedOrigin(origin)) {
       reply.header("Access-Control-Allow-Origin", origin);
       reply.header("Access-Control-Allow-Credentials", "true");
+      reply.header("Access-Control-Allow-Headers", "content-type, authorization");
       reply.header("Vary", "Origin");
     }
     reply.header("Cache-Control", "no-store");
     return payload;
   });
   app.options("/*", async (request, reply) => {
-    if (request.headers.origin !== undefined && allowedOrigins.has(request.headers.origin)) {
+    if (request.headers.origin !== undefined && isAllowedOrigin(request.headers.origin)) {
       reply.header("Access-Control-Allow-Origin", request.headers.origin);
       reply.header("Access-Control-Allow-Credentials", "true");
-      reply.header("Access-Control-Allow-Headers", "content-type");
+      reply.header("Access-Control-Allow-Headers", "content-type, authorization");
       reply.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     }
     return reply.code(204).send();
@@ -219,12 +237,26 @@ export function buildServer(
     );
   }
 
+  function extractSessionToken(request: {
+    readonly headers: {
+      readonly cookie?: string | undefined;
+      readonly authorization?: string | undefined;
+    };
+  }): string | null {
+    const authHeader = request.headers.authorization;
+    if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.slice(7).trim();
+      if (token.length >= 16) return token;
+    }
+    return ApplicationStore.readSessionCookie(request.headers.cookie);
+  }
+
   function requireAccount(
-    request: { headers: { cookie?: string | undefined } },
+    request: { headers: { cookie?: string | undefined; authorization?: string | undefined } },
     reply: FastifyReply,
   ): string | null {
     const store = requireStore();
-    const token = ApplicationStore.readSessionCookie(request.headers.cookie);
+    const token = extractSessionToken(request);
     const account = store.accountForSession(token);
     if (account === null) {
       reply.code(401).send({ error: "AUTH_REQUIRED", message: "Sign in to continue" });
@@ -234,7 +266,12 @@ export function buildServer(
   }
 
   function requireLegacyAccess(
-    request: { readonly headers: { readonly cookie?: string | undefined } },
+    request: {
+      readonly headers: {
+        readonly cookie?: string | undefined;
+        readonly authorization?: string | undefined;
+      };
+    },
     reply: FastifyReply,
   ): boolean {
     if (demoRoutesEnabled()) return true;
@@ -256,7 +293,7 @@ export function buildServer(
       "Set-Cookie",
       ApplicationStore.sessionCookie(result.sessionToken, environment.NODE_ENV === "production"),
     );
-    return reply.code(201).send({ account: result.account });
+    return reply.code(201).send({ account: result.account, sessionToken: result.sessionToken });
   });
 
   app.post("/auth/sign-in", async (request, reply) => {
@@ -268,12 +305,12 @@ export function buildServer(
       "Set-Cookie",
       ApplicationStore.sessionCookie(result.sessionToken, environment.NODE_ENV === "production"),
     );
-    return reply.send({ account: result.account });
+    return reply.send({ account: result.account, sessionToken: result.sessionToken });
   });
 
   app.post("/auth/sign-out", async (request, reply) => {
     const store = requireStore();
-    store.revokeSession(ApplicationStore.readSessionCookie(request.headers.cookie));
+    store.revokeSession(extractSessionToken(request));
     reply.header(
       "Set-Cookie",
       ApplicationStore.clearSessionCookie(environment.NODE_ENV === "production"),
@@ -283,9 +320,7 @@ export function buildServer(
 
   app.get("/auth/me", async (request, reply) => {
     const store = requireStore();
-    const account = store.accountForSession(
-      ApplicationStore.readSessionCookie(request.headers.cookie),
-    );
+    const account = store.accountForSession(extractSessionToken(request));
     if (account === null)
       return reply.code(401).send({ error: "AUTH_REQUIRED", message: "Sign in to continue" });
     return reply.send({ account });

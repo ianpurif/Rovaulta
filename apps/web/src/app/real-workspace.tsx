@@ -14,6 +14,7 @@ import {
   type ReleaseAttempt,
   type Robot,
   type Site,
+  setClientSessionToken,
 } from "./api-client";
 
 export type ProductView = "overview" | "setup" | "builds" | "evaluate" | "releases" | "evidence";
@@ -2006,6 +2007,7 @@ export function RealProductApp({ initialView }: { readonly initialView: ProductV
       .catch((reason) => {
         if (!active) return;
         if (reason instanceof ApiError && reason.status === 401) {
+          setClientSessionToken(null);
           router.replace(`/start?next=${encodeURIComponent(pathname)}`);
           return;
         }
@@ -2024,6 +2026,7 @@ export function RealProductApp({ initialView }: { readonly initialView: ProductV
     setSignOutError(null);
     try {
       await apiFetch("/auth/sign-out", { method: "POST" });
+      setClientSessionToken(null);
       window.sessionStorage.removeItem("rovaulta.p5.prepared");
       router.replace("/start");
     } catch (reason) {

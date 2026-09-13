@@ -10,7 +10,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { type Account, ApiError, apiFetch } from "../api-client";
+import { type Account, ApiError, apiFetch, getClientSessionToken } from "../api-client";
 
 const apiOrigin = process.env.NEXT_PUBLIC_API_ORIGIN ?? "http://localhost:4000";
 const preparedHandoffKey = "rovaulta.p5.prepared";
@@ -66,9 +66,14 @@ function parseDemoPreparedHandoff(value: unknown): DemoPreparedHandoff | null {
 }
 
 async function post(path: string, body: unknown) {
+  const token = getClientSessionToken();
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  if (token) {
+    headers.authorization = `Bearer ${token}`;
+  }
   const response = await fetch(`${apiOrigin}${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers,
     credentials: "include",
     cache: "no-store",
     body: JSON.stringify(body),

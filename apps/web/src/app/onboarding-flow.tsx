@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { type Account, ApiError, apiFetch, jsonBody } from "./api-client";
+import { type Account, ApiError, apiFetch, jsonBody, setClientSessionToken } from "./api-client";
 import styles from "./entry-page.module.css";
 
 type AccountEntryMode = "register" | "sign-in";
@@ -40,6 +40,7 @@ function useAccountEntry(initialMode: AccountEntryMode) {
       .catch((reason) => {
         if (!active) return;
         if (reason instanceof ApiError && reason.status === 401) {
+          setClientSessionToken(null);
           setSessionState("anonymous");
           return;
         }
@@ -61,10 +62,13 @@ function useAccountEntry(initialMode: AccountEntryMode) {
     setBusy(true);
     setError(null);
     try {
-      await apiFetch<{ account: Account }>(
+      const result = await apiFetch<{ account: Account; sessionToken?: string }>(
         submittedMode === "register" ? "/auth/register" : "/auth/sign-in",
         { method: "POST", body: jsonBody({ email, password }) },
       );
+      if (typeof result.sessionToken === "string") {
+        setClientSessionToken(result.sessionToken);
+      }
       router.replace(
         next?.startsWith("/app") ? next : submittedMode === "register" ? "/app/setup" : "/app",
       );
