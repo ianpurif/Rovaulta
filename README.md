@@ -23,7 +23,7 @@ external Ledger Clear Signing prerequisite documented below.
 > presented as completed proof. Start Fresh / From Scratch eligibility is documented as a maintainer
 > declaration with repository-history corroboration in the [eligibility artifact](docs/compliance/evidence/graph-start-fresh-eligibility-2026-09-11.md).
 
-[Product path](#use-the-product) · [How it works](#how-it-works) · [Partner proof](#partner-integrations) · [Testing](#testing) · [Known limits](#current-status-and-known-limits)
+[Product path](#use-the-product) · [How it works](#how-it-works) · [Partner proof](#partner-integrations) · [Local setup](#local-setup--development-guide) · [Cloud deployment](#production--cloud-deployment-guide-oracle-cloud--vercel) · [Testing](#testing) · [Known limits](#current-status-and-known-limits)
 
 ## In one minute
 
@@ -282,6 +282,8 @@ secret custody or a remote robot attestation.
 | Human approval          | Ledger DMK, WebHID, Speculos test transport, Ethereum Signer Kit, EIP-712                             | Keeps the release key on the device and makes the signed intent explicit                                                      |
 | Public registry context | The Graph Subgraph Studio deployment + Sepolia RovaultaRegistry subgraph (Gateway-compatible adapter) | Gives the bounded agent current public clearance context before the final P5 check; current live proof is Studio, not Gateway |
 | Persistence             | Bun SQLite with WAL and atomic nonce consumption                                                      | Provides a single-node replay boundary for the release service                                                                |
+| Cloud Hosting           | Oracle Cloud Infrastructure (OCI Compute VM)                                                          | Hosts the persistent Fastify release boundary, SQLite databases, and deployment agent runtime                                  |
+| Frontend Platform       | Vercel (Edge & CDN)                                                                                   | Delivers the Next.js workspace, landing page, and digital twin client globally with automatic branch previews                  |
 | Quality                 | Biome, Bun test, Playwright, Foundry, GitHub Actions                                                  | Covers formatting, unit tests, browser flow, contracts, and scaffold checks                                                   |
 
 ### Sepolia registry
@@ -667,6 +669,197 @@ bun run demo:reset       # Safely clears demo fixture directory
   Use `bun apps/api/scripts/get-clearance-digest.ts` or read `.data/clearance-live.digest`. The 32-byte digest is computed cryptographically from the record fields and is not a plain string in `clearance-live.json`.
 - **`ApplicationError: Evaluation was not found`**:
   Ensure `apps/api/.data` is a symlink to `../../.data` (`ln -s ../../.data apps/api/.data`). Otherwise, commands executed with `--cwd apps/api` will look in an empty child database.
+
+---
+
+## Production & Cloud Deployment Guide (Oracle Cloud + Vercel)
+
+Rovaulta uses a clean decoupled architecture in production:
+- **Frontend**: Hosted on [Vercel](https://vercel.com) (Edge CDN, SSL, Next.js serverless rendering, automated Git CI/CD).
+- **Backend & Services**: Hosted on [Oracle Cloud Infrastructure (OCI)](https://www.oracle.com/cloud/) (Compute VM instance running Fastify, Bun SQLite with WAL replay persistence, Chainlink CRE CLI runner, and the Gemini deployment agent).
+- **Cross-Origin Auth Bridge**: The browser communicates seamlessly between the Vercel frontend (`https://<project>.vercel.app`) and the Oracle Cloud API (`https://api.yourdomain.com` or `http://<OCI_IP>:4000`) using dual `SameSite=None; Secure` cookies paired with an automatic `Authorization: Bearer <sessionToken>` fallback in `apiFetch`.
+
+---
+
+### Part A: Oracle Cloud Infrastructure (OCI) Backend Setup
+
+#### 1. Provision an OCI Compute Instance
+1. Log into your **Oracle Cloud Console**.
+2. Navigate to **Compute → Instances → Create Instance**.
+3. **Image:** Select **Ubuntu 22.04 LTS** or **Ubuntu 24.04 LTS** (Canonical Ubuntu).
+4. **Shape:**
+   - *Option A (Always Free):* `VM.Standard.A1.Flex` (Ampere ARM, up to 4 OCPUs, 24 GB RAM).
+   - *Option B (AMD/Intel):* `VM.Standard.E2.1.Micro` or any standard x86_64 compute shape.
+5. **Networking:** Select your Virtual Cloud Network (VCN) and assign a public IPv4 address.
+6. **SSH Keys:** Upload your SSH public key and launch the instance.
+
+#### 2. Configure OCI Network Ingress (Security List)
+To allow inbound API traffic to Fastify (port 4000) or HTTP/HTTPS (ports 80/443):
+1. In the OCI Console, go to **Networking → Virtual Cloud Networks → [Your VCN] → Security Lists → Default Security List**.
+2. Click **Add Ingress Rules**:
+   - **Source CIDR:** `0.0.0.0/0`
+   - **IP Protocol:** `TCP`
+   - **Destination Port Range:** `4000, 80, 443`
+   - **Description:** `Rovaulta API and Web Ingress`
+3. Click **Add Ingress Rules**.
+
+#### 3. Open Linux Firewall on the OCI VM
+Oracle Cloud Ubuntu images include default host-level `iptables` rules that block incoming traffic even when the VCN Security List allows it. Open port 4000 on the VM:
+
+```bash
+# Connect to your OCI VM:
+ssh -i ~/.ssh/id_rsa ubuntu@<YOUR_OCI_PUBLIC_IP>
+
+# Open TCP port 4000 (and 80/443 if using a reverse proxy):
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 4000 -j ACCEPT
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+
+# Save the iptables rules to persist across reboots:
+sudo apt install -y iptables-persistent netfilter-persistent
+sudo netfilter-persistent save
+```
+
+#### 4. Install Toolchain & Clone Rovaulta on OCI
+```bash
+# 1. Update and install prerequisites
+sudo apt update && sudo apt install -y curl git build-essential sqlite3 python3-venv
+
+# 2. Install Bun (Primary Engine)
+curl -fsSL https://bun.sh/install | bash
+source ~/.bashrc
+
+# 3. Clone repository
+git clone https://github.com/ianpurif/Rovaulta.git ~/rovaulta
+cd ~/rovaulta
+
+# 4. Install dependencies and compile contracts
+bun install --frozen-lockfile
+bun run contracts:build
+
+# 5. Set up the shared data directory and symlink
+mkdir -p .data
+rm -rf apps/api/.data
+ln -s ../../.data apps/api/.data
+```
+
+#### 5. Configure Production Environment (`.env`)
+Create the production `.env` on the OCI VM:
+
+```bash
+cat << 'EOF' > ~/rovaulta/.env
+NODE_ENV=production
+WEB_ORIGIN=https://<YOUR_VERCEL_PROJECT>.vercel.app
+ROVAULTA_WEB_ORIGIN=https://<YOUR_VERCEL_PROJECT>.vercel.app
+API_ORIGIN=http://<YOUR_OCI_PUBLIC_IP>:4000
+NEXT_PUBLIC_API_ORIGIN=http://<YOUR_OCI_PUBLIC_IP>:4000
+
+# Application and Release Replay Databases
+ROVAULTA_APP_DB_PATH=.data/rovaulta-app.sqlite
+ROVAULTA_RELEASE_DB_PATH=.data/rovaulta-release.sqlite
+ROVAULTA_APPLICATION_POLICY_KEY=000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+
+# Ethereum Sepolia Registry
+EVM_CHAIN_ID=11155111
+SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/<YOUR_ALCHEMY_KEY>
+SEPOLIA_DEPLOYER_PRIVATE_KEY=<YOUR_PRIVATE_KEY>
+ROVAULTA_REGISTRY_ADDRESS=0xFB270cc222efa8B5005AA097dD512Be2558dde65
+ROVAULTA_AUTHORIZED_SIGNERS=0xDad77910DbDFdE764fC21FCD4E74D71bBACA6D8D,<YOUR_DEPLOYER_ADDRESS>
+
+# The Graph Subgraph Studio Indexer
+THE_GRAPH_STUDIO_QUERY_URL=https://api.studio.thegraph.com/query/1758964/rovaulta-registry/0.1.0
+
+# Gemini AI Deployment Agent
+GEMINI_API_KEY=<YOUR_GEMINI_API_KEY>
+GEMINI_MODEL=gemini-3.5-flash-lite
+
+# Ledger Gateway & Signing Protocol
+NEXT_PUBLIC_LEDGER_DERIVATION_PATH="44'/60'/0'/0/0"
+EOF
+```
+
+#### 6. Run API Daemon with Systemd
+Create a systemd unit so the Rovaulta API runs continuously in the background and restarts automatically if the OCI instance reboots:
+
+```bash
+sudo bash -c 'cat << EOF > /etc/systemd/system/rovaulta-api.service
+[Unit]
+Description=Rovaulta Fastify API & Deployment Gate
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/rovaulta
+EnvironmentFile=/home/ubuntu/rovaulta/.env
+ExecStart=/home/ubuntu/.bun/bin/bun --env-file /home/ubuntu/rovaulta/.env /home/ubuntu/rovaulta/apps/api/src/index.ts
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF'
+
+# Reload systemd, enable and start the service:
+sudo systemctl daemon-reload
+sudo systemctl enable rovaulta-api
+sudo systemctl start rovaulta-api
+
+# Check service status:
+sudo systemctl status rovaulta-api
+```
+
+_Verify health check from your local machine or browser:_
+```bash
+curl http://<YOUR_OCI_PUBLIC_IP>:4000/health
+# Returns: {"status":"ok","phase":"p5.2-ai-deployment-agent",...}
+```
+
+---
+
+### Part B: Vercel Frontend Deployment
+
+#### 1. Connect GitHub Repository to Vercel
+1. Go to [vercel.com](https://vercel.com) and click **Add New → Project**.
+2. Select your `Rovaulta` repository.
+3. Configure the project settings:
+   - **Framework Preset:** `Next.js`
+   - **Root Directory:** Edit and select `apps/web` (or leave at root if using root monorepo build command)
+   - **Build Command:** `bun run build` (or `next build`)
+   - **Install Command:** `bun install`
+
+#### 2. Configure Environment Variables on Vercel
+In the **Environment Variables** section of the Vercel project settings, configure:
+
+| Variable Name                          | Value                                                              | Description                                                                              |
+| -------------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_API_ORIGIN`               | `http://<YOUR_OCI_PUBLIC_IP>:4000` (or `https://api.yourdomain.com`) | Directs the frontend to your Oracle Cloud API instance                                   |
+| `NEXT_PUBLIC_LEDGER_TRANSPORT`         | `webhid`                                                           | Enables hardware USB WebHID connection for physical Ledger devices in production        |
+| `NEXT_PUBLIC_LEDGER_DERIVATION_PATH`   | `"44'/60'/0'/0/0"`                                                 | Default Ethereum BIP-44 path for Ledger approval                                         |
+
+#### 3. Deploy
+Click **Deploy**. Vercel will build and deploy the Next.js frontend to a live URL (e.g., `https://rovaulta-web.vercel.app`).
+
+---
+
+### Part C: Verification & Cross-Origin Validation
+
+Once both the OCI backend and Vercel frontend are deployed:
+
+1. **Verify End-to-End Sign In / Onboarding:**
+   - Visit `https://<YOUR_VERCEL_PROJECT>.vercel.app/start`.
+   - Click **Create Account** or **Sign In**.
+   - The frontend authenticates against your Oracle Cloud VM, sets the secure session cookie, and saves the client bearer token.
+   - The app navigates smoothly to `/app` without unexpected reloads.
+
+2. **Verify Evaluation & Deployment Gate:**
+   - Create your site and private safety envelope.
+   - Register a robot build and run an evaluation pass.
+   - Review the public clearance and verify that the Gemini deployment agent inspects The Graph registry context before requesting human Ledger confirmation at `/p5-ledger`.
+
+---
 
 ## Testing
 
