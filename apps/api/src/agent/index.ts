@@ -49,9 +49,24 @@ export function createDeploymentAgentFromEnvironment(
           return parseDeploymentCatalogEntry({
             key: context.evaluation.evaluationId,
             aliases: {
-              site: Array.from(new Set([context.evaluation.siteId, context.evaluation.siteId.replace(/^site:/, "")])),
-              robot: Array.from(new Set([context.evaluation.robotId, context.evaluation.robotId.replace(/^robot:/, "")])),
-              build: Array.from(new Set([context.evaluation.robotBuildId, context.evaluation.robotBuildId.replace(/^robot-build:/, "")])),
+              site: Array.from(
+                new Set([
+                  context.evaluation.siteId,
+                  context.evaluation.siteId.replace(/^site:/, ""),
+                ]),
+              ),
+              robot: Array.from(
+                new Set([
+                  context.evaluation.robotId,
+                  context.evaluation.robotId.replace(/^robot:/, ""),
+                ]),
+              ),
+              build: Array.from(
+                new Set([
+                  context.evaluation.robotBuildId,
+                  context.evaluation.robotBuildId.replace(/^robot-build:/, ""),
+                ]),
+              ),
             },
             target: {
               siteId: context.evaluation.siteId,

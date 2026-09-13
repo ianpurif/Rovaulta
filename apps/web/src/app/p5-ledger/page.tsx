@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import P5LedgerOperatorPage from "./operator-page";
 
+export const dynamic = "force-dynamic";
+
 export default function P5LedgerPage() {
   const allowDemoHandoff =
     process.env.NODE_ENV !== "production" && process.env.ROVAULTA_ENABLE_DEMO_ROUTES === "true";

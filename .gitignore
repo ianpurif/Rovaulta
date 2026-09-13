@@ -16,7 +16,7 @@ integrations/the-graph/build/
 *.log
 *.tsbuildinfo
 .data/
-# Account-owned P13 setup files may contain a facility policy and stay local.
+apps/api/.data
 apps/api/.data/
 *.sqlite
 *.sqlite-shm

@@ -14,12 +14,8 @@ import { type Account, ApiError, apiFetch } from "../api-client";
 
 const apiOrigin = process.env.NEXT_PUBLIC_API_ORIGIN ?? "http://localhost:4000";
 const preparedHandoffKey = "rovaulta.p5.prepared";
-const ledgerTransport = parseLedgerTransportConfig(
-  process.env.NEXT_PUBLIC_LEDGER_TRANSPORT,
-  process.env.NEXT_PUBLIC_LEDGER_SPECULOS_URL,
-  process.env.NODE_ENV,
-);
-const isSpeculos = ledgerTransport.kind === "speculos";
+const isSpeculos =
+  (process.env.NEXT_PUBLIC_LEDGER_TRANSPORT?.trim().toLowerCase() ?? "webhid") === "speculos";
 
 type PreparedHandoff = Readonly<{
   readonly version: 1;
@@ -151,15 +147,26 @@ export default function P5LedgerOperatorPage({
     function initializeLedger(accountId: string | null) {
       if (!active) return;
       loadHandoff(accountId);
-      ledger = new LedgerBrowserAdapter(
-        process.env.NEXT_PUBLIC_LEDGER_ORIGIN_TOKEN ?? "",
-        process.env.NEXT_PUBLIC_LEDGER_DERIVATION_PATH || undefined,
-        createLedgerBrowserDependencies(
-          createLedgerTransportRuntime(ledgerTransport, process.env.NODE_ENV),
-        ),
-      );
-      adapter.current = ledger;
-      setAuthState("ready");
+      try {
+        const ledgerTransport = parseLedgerTransportConfig(
+          process.env.NEXT_PUBLIC_LEDGER_TRANSPORT,
+          process.env.NEXT_PUBLIC_LEDGER_SPECULOS_URL,
+          process.env.NODE_ENV,
+        );
+        ledger = new LedgerBrowserAdapter(
+          process.env.NEXT_PUBLIC_LEDGER_ORIGIN_TOKEN ?? "",
+          process.env.NEXT_PUBLIC_LEDGER_DERIVATION_PATH || undefined,
+          createLedgerBrowserDependencies(
+            createLedgerTransportRuntime(ledgerTransport, process.env.NODE_ENV),
+          ),
+        );
+        adapter.current = ledger;
+        setAuthState("ready");
+      } catch (error) {
+        setAuthState("error");
+        setAuthError(publicError(error));
+        setStatus("Failed to initialize Ledger transport.");
+      }
     }
 
     if (demoHandoff) {
